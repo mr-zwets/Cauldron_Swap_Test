@@ -25,7 +25,7 @@ export async function parsePoolPrices(pools:CauldronActivePool[]){
   })
 }
 
-export async function buyTokensPool(pool:CauldronActivePool, amountToBuy:bigint){
+export async function buyTokensPool(pool:CauldronActivePool, amountToBuy:number){
   const cauldronUtxo = convertPoolToUtxo(pool);
   const transactionBuilder = new TransactionBuilder({ provider });
 
@@ -34,17 +34,19 @@ export async function buyTokensPool(pool:CauldronActivePool, amountToBuy:bigint)
   const cauldronContract = new Contract(cauldronContractWithPkh(pool.owner_pkh), [], options);
   transactionBuilder.addInput(cauldronUtxo, cauldronContract.unlock.swap())
 
-  const poolConstant = BigInt(pool.tokens) * BigInt(pool.sats)
-  // TODO: take into account the 0.3 % fee 
-  const newCauldronAmountTokens = BigInt(pool.tokens) - amountToBuy
-  const newCauldronAmountSats = poolConstant / newCauldronAmountTokens
+  const poolConstant = pool.tokens * pool.sats
+  const cauldronAmountExludingFee = Math.ceil(poolConstant / (pool.tokens - amountToBuy))
+  const tradeValue = Math.abs(cauldronAmountExludingFee - pool.sats)
+  const fee = 0.3 * tradeValue
+  const newCauldronAmountSats = cauldronAmountExludingFee + fee
+  const newCauldronAmountTokens = poolConstant / newCauldronAmountSats
 
   const cauldronOuput: Output = {
     to: cauldronContract.address,
-    amount: newCauldronAmountSats,
+    amount: BigInt(newCauldronAmountSats),
     token: {
       category: pool.token_id,
-      amount: newCauldronAmountTokens
+      amount: BigInt(newCauldronAmountTokens)
     }
   }
   transactionBuilder.addOutput(cauldronOuput)
