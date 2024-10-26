@@ -1,0 +1,12 @@
+{
+  "name": "cauldronSwapTest",
+  "version": "1.0.0",
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "cashscript": "^0.10.1"
+  }
+}
