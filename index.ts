@@ -1,4 +1,4 @@
-import { Artifact, Contract, ElectrumNetworkProvider, TransactionBuilder } from 'cashscript';
+import { Artifact, Contract, ElectrumNetworkProvider, Output, TransactionBuilder } from 'cashscript';
 // The cauldronArtifact contains a template variable <withdraw_pkh>
 import cauldronArtifact from './artifact.json' with { type: 'json' };
 import { CauldronActivePool, CauldronGetActivePools } from './interfaces';
@@ -25,15 +25,30 @@ export async function parsePoolPrices(pools:CauldronActivePool[]){
   })
 }
 
-export async function buyTokensPool(pool:CauldronActivePool){
+export async function buyTokensPool(pool:CauldronActivePool, amountToBuy:bigint){
+  const cauldronUtxo = convertPoolToUtxo(pool);
   const transactionBuilder = new TransactionBuilder({ provider });
 
   // Add the cauldron pool as an input to the transactionBuilder
-  const cauldronUtxo = convertPoolToUtxo(pool);
   const options = { provider, addressType:'p2sh32' as const };
   const cauldronContract = new Contract(cauldronContractWithPkh(pool.owner_pkh), [], options);
   transactionBuilder.addInput(cauldronUtxo, cauldronContract.unlock.swap())
 
-  // TODO: add other inputs and outputs
+  const poolConstant = BigInt(pool.tokens) * BigInt(pool.sats)
+  // TODO: take into account the 0.3 % fee 
+  const newCauldronAmountTokens = BigInt(pool.tokens) - amountToBuy
+  const newCauldronAmountSats = poolConstant / newCauldronAmountTokens
+
+  const cauldronOuput: Output = {
+    to: cauldronContract.address,
+    amount: newCauldronAmountSats,
+    token: {
+      category: pool.token_id,
+      amount: newCauldronAmountTokens
+    }
+  }
+  transactionBuilder.addOutput(cauldronOuput)
+
+  // TODO: add user inputs and outputs
   // including the user input to pay for the bought tokens
 }
