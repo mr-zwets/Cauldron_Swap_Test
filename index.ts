@@ -21,12 +21,21 @@ export async function parsePoolPrices(pools:CauldronActivePool[]){
   return pools.map(pool => {
     const { tokens, sats } = pool;
     const priceSatsPerToken = tokens / sats;
-    return { price: priceSatsPerToken, pool };
+    return { price: priceSatsPerToken, ...pool };
   })
 }
 
-export async function buyTokensPool(pool:CauldronActivePool, amountToBuy:number){
+export async function buyTokensPool(
+  pool:CauldronActivePool,
+  amountToBuy:number,
+  userAddress:string
+){
   const cauldronUtxo = convertPoolToUtxo(pool);
+  const UserUtxos = await provider.getUtxos(userAddress);
+  const userBalanceSats = UserUtxos.reduce((total, utxo) => 
+    utxo?.token? total : total += utxo.satoshis
+  , 0n);
+
   const transactionBuilder = new TransactionBuilder({ provider });
 
   // Add the cauldron pool as an input to the transactionBuilder
@@ -37,8 +46,8 @@ export async function buyTokensPool(pool:CauldronActivePool, amountToBuy:number)
   const poolConstant = pool.tokens * pool.sats
   const cauldronAmountExludingFee = Math.ceil(poolConstant / (pool.tokens - amountToBuy))
   const tradeValue = Math.abs(cauldronAmountExludingFee - pool.sats)
-  const fee = 0.3 * tradeValue
-  const newCauldronAmountSats = cauldronAmountExludingFee + fee
+  const poolFee = 0.3 * tradeValue
+  const newCauldronAmountSats = cauldronAmountExludingFee + poolFee
   const newCauldronAmountTokens = poolConstant / newCauldronAmountSats
 
   const cauldronOuput: Output = {
@@ -51,6 +60,15 @@ export async function buyTokensPool(pool:CauldronActivePool, amountToBuy:number)
   }
   transactionBuilder.addOutput(cauldronOuput)
 
-  // TODO: add user inputs and outputs
-  // including the user input to pay for the bought tokens
+  const boughtTokensOutput:Output = {
+    to: userAddress,
+    amount: 1000n,
+    token: {
+      category: pool.token_id,
+      amount: BigInt(amountToBuy)
+    }
+  }
+  transactionBuilder.addOutput(boughtTokensOutput)
+
+  // TODO: add user inputs and change output
 }
