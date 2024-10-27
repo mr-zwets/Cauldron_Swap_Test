@@ -11,10 +11,9 @@ import { cauldronContractWithPkh, convertPoolToUtxo } from './utils';
 
 const provider = new ElectrumNetworkProvider('mainnet');
 
-export async function getCauldronUtxos(tokenId:string){ 
+export async function getCauldronPools(tokenId:string){ 
   const result = await fetch(`https://indexer.cauldron.quest/cauldron/pool/active?token=${tokenId}`)
-  const jsonResult = await result.json() as CauldronGetActivePools
-  return jsonResult
+  return await result.json() as CauldronGetActivePools
 }
 
 export async function parsePoolPrices(pools:CauldronActivePool[]){
@@ -32,10 +31,9 @@ export async function buyTokensPool(
   privateKeyWif:string
 ){
   const cauldronUtxo = convertPoolToUtxo(pool);
-  const UserUtxos = await provider.getUtxos(userAddress);
-  const userBalanceSats = UserUtxos.reduce((total, utxo) => 
-    utxo?.token? total : total += utxo.satoshis
-  , 0n);
+  const userUtxos = await provider.getUtxos(userAddress);
+  const userBchUtxos = userUtxos.filter(utxo => !utxo.token)
+  const userBalanceSats = userBchUtxos.reduce((total, utxo) => total += utxo.satoshis, 0n);
 
   const transactionBuilder = new TransactionBuilder({ provider });
 
@@ -53,12 +51,12 @@ export async function buyTokensPool(
   // calculate user input amount
   const userInputAmountNeeded = BigInt(tradeValue + poolFee) + 1000n
   if(userBalanceSats < userInputAmountNeeded) throw new Error('Insufficient funds to buy tokens')
-  const sortedUserUtxos = UserUtxos.sort((a, b) => Number(a.satoshis) - Number(b.satoshis))
+  const sortedUserBchUtxos = userBchUtxos.sort((a, b) => Number(a.satoshis) - Number(b.satoshis))
 
   // add needed userInputs to the transactionBuilder
   const userTemplate = new SignatureTemplate(privateKeyWif)
   let userSatsInInputs = 0n
-  for(const userUtxo of sortedUserUtxos){
+  for(const userUtxo of sortedUserBchUtxos){
     userSatsInInputs += userUtxo.satoshis
     transactionBuilder.addInput(userUtxo, userTemplate.unlockP2PKH())
     if(userSatsInInputs >= userInputAmountNeeded) break
