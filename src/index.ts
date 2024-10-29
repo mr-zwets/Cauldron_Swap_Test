@@ -1,14 +1,14 @@
 import {
   Contract,
   ElectrumNetworkProvider,
-  NetworkProvider,
-  Output,
+  type NetworkProvider,
+  type Output,
   SignatureTemplate,
   TransactionBuilder
 } from 'cashscript';
 // The cauldronArtifact contains a template variable <withdraw_pkh>
-import { CauldronActivePool, CauldronGetActivePools } from './interfaces';
-import { cauldronContractWithPkh, convertPoolToUtxo } from './utils';
+import type { CauldronActivePool, CauldronGetActivePools } from './interfaces.js';
+import { cauldronContractWithPkh, convertPoolToUtxo } from './utils.js';
 
 export async function getCauldronPools(tokenId:string){ 
   const result = await fetch(`https://indexer.cauldron.quest/cauldron/pool/active?token=${tokenId}`)
@@ -63,10 +63,10 @@ export async function buyTokensPool(
   }
 
   const newCauldronAmountSats = cauldronAmountExludingFee + poolFee
-  const newCauldronAmountTokens = poolConstant / newCauldronAmountSats
+  const newCauldronAmountTokens = Math.ceil(poolConstant / newCauldronAmountSats)
 
   const cauldronOuput: Output = {
-    to: cauldronContract.address,
+    to: cauldronContract.tokenAddress,
     amount: BigInt(newCauldronAmountSats),
     token: {
       category: pool.token_id,

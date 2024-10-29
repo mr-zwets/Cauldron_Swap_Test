@@ -1,6 +1,6 @@
 import type { Artifact, Utxo } from 'cashscript';
 import cauldronArtifact from './artifact.json' with { type: 'json' };
-import { CauldronActivePool } from './interfaces';
+import { type CauldronActivePool } from './interfaces.js';
 
 export function cauldronContractWithPkh(pkhHex:string){
   const strigifiedCauldronArtifact = JSON.stringify(cauldronArtifact);

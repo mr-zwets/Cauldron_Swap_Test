@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "verbatimModuleSyntax": true,
+    "moduleResolution": "NodeNext",
+    "types": ["vitest/globals"],
+    "resolveJsonModule": true,
+  },
+  "include": ["src"]
+}
