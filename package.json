@@ -1,7 +1,9 @@
 {
   "name": "cauldronSwapTest",
   "version": "0.1.0",
-  "scripts": {},
+  "scripts": {
+    "test": "vitest"
+  },
   "type": "module",
   "keywords": [],
   "author": "",
@@ -9,5 +11,8 @@
   "description": "",
   "dependencies": {
     "cashscript": "^0.10.1"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.4"
   }
 }
