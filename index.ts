@@ -9,11 +9,9 @@ import {
 import { CauldronActivePool, CauldronGetActivePools } from './interfaces';
 import { cauldronContractWithPkh, convertPoolToUtxo } from './utils';
 
-const provider = new ElectrumNetworkProvider('mainnet');
-
 export async function getCauldronPools(tokenId:string){ 
   const result = await fetch(`https://indexer.cauldron.quest/cauldron/pool/active?token=${tokenId}`)
-  return await result.json() as CauldronGetActivePools
+  return (await result.json() as CauldronGetActivePools).active
 }
 
 export async function parsePoolPrices(pools:CauldronActivePool[]){
@@ -28,7 +26,8 @@ export async function buyTokensPool(
   pool:CauldronActivePool,
   amountToBuy:number,
   userAddress:string,
-  privateKeyWif:string
+  privateKeyWif:string,
+  provider:ElectrumNetworkProvider = new ElectrumNetworkProvider('mainnet')
 ){
   const cauldronUtxo = convertPoolToUtxo(pool);
   const userUtxos = await provider.getUtxos(userAddress);
