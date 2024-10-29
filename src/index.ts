@@ -1,6 +1,7 @@
 import {
   Contract,
   ElectrumNetworkProvider,
+  NetworkProvider,
   Output,
   SignatureTemplate,
   TransactionBuilder
@@ -27,7 +28,7 @@ export async function buyTokensPool(
   amountToBuy:number,
   userAddress:string,
   privateKeyWif:string,
-  provider:ElectrumNetworkProvider = new ElectrumNetworkProvider('mainnet')
+  provider:NetworkProvider = new ElectrumNetworkProvider('mainnet')
 ){
   const cauldronUtxo = convertPoolToUtxo(pool);
   const userUtxos = await provider.getUtxos(userAddress);
