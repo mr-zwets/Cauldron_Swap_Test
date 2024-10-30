@@ -2,7 +2,7 @@
 
 Cauldron Swap Test using the CashScript SDK
 
-**NOTE**: the code is currently not passing any tests so proceed with great caution!
+**NOTE**: the code is currently only has a single test case so proceed with great caution!
 
 ## Usage
 
