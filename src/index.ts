@@ -2,9 +2,9 @@ import {
   Contract,
   ElectrumNetworkProvider,
   type NetworkProvider,
-  type Output,
+  type Recipient,
   SignatureTemplate,
-  TransactionBuilder
+  type Utxo,
 } from 'cashscript';
 // The cauldronArtifact contains a template variable <withdraw_pkh>
 import type { CauldronActivePool, CauldronGetActivePools } from './interfaces.js';
@@ -35,18 +35,16 @@ export async function buyTokensPool(
   const userBchUtxos = userUtxos.filter(utxo => !utxo.token)
   const userBalanceSats = userBchUtxos.reduce((total, utxo) => total += utxo.satoshis, 0n);
 
-  const transactionBuilder = new TransactionBuilder({ provider });
 
   // Add the cauldron pool as an input to the transactionBuilder
   const options = { provider, addressType:'p2sh32' as const };
   const cauldronContract = new Contract(cauldronContractWithPkh(pool.owner_pkh), [], options);
-  transactionBuilder.addInput(cauldronUtxo, cauldronContract.unlock.swap())
 
   // calculate tradeValue and poolFee
   const poolConstant = pool.tokens * pool.sats
-  const cauldronAmountExludingFee = Math.ceil(poolConstant / (pool.tokens - amountToBuy))
-  const tradeValue = Math.abs(cauldronAmountExludingFee - pool.sats)
-  const poolFee = 0.3 * tradeValue
+  const cauldronNewAmountSatsExludingFee = Math.ceil(poolConstant / (pool.tokens - amountToBuy))
+  const tradeValue = Math.abs(cauldronNewAmountSatsExludingFee - pool.sats)
+  const poolFee = Math.floor(tradeValue / 1000 * 3)
 
   // calculate user input amount
   const userInputAmountNeeded = BigInt(tradeValue + poolFee) + 1000n
@@ -56,16 +54,17 @@ export async function buyTokensPool(
   // add needed userInputs to the transactionBuilder
   const userTemplate = new SignatureTemplate(privateKeyWif)
   let userSatsInInputs = 0n
+  let userInputs:Utxo[]= []
   for(const userUtxo of sortedUserBchUtxos){
     userSatsInInputs += userUtxo.satoshis
-    transactionBuilder.addInput(userUtxo, userTemplate.unlockP2PKH())
+    userInputs.push(userUtxo)
     if(userSatsInInputs >= userInputAmountNeeded) break
   }
 
-  const newCauldronAmountSats = cauldronAmountExludingFee + poolFee
-  const newCauldronAmountTokens = Math.ceil(poolConstant / newCauldronAmountSats)
+  const newCauldronAmountSats = cauldronNewAmountSatsExludingFee + poolFee
+  const newCauldronAmountTokens = Math.ceil(poolConstant / cauldronNewAmountSatsExludingFee)
 
-  const cauldronOuput: Output = {
+  const cauldronOuput:Recipient = {
     to: cauldronContract.tokenAddress,
     amount: BigInt(newCauldronAmountSats),
     token: {
@@ -73,9 +72,8 @@ export async function buyTokensPool(
       amount: BigInt(newCauldronAmountTokens)
     }
   }
-  transactionBuilder.addOutput(cauldronOuput)
 
-  const boughtTokensOutput:Output = {
+  const boughtTokensOutput:Recipient = {
     to: userAddress,
     amount: 1000n,
     token: {
@@ -83,13 +81,17 @@ export async function buyTokensPool(
       amount: BigInt(amountToBuy)
     }
   }
-  transactionBuilder.addOutput(boughtTokensOutput)
 
-  const userChangeOutput: Output = {
+  const minerFee = 400n + 200n * BigInt(userInputs.length)
+  const userChangeOutput:Recipient  = {
     to: userAddress,
-    amount: userSatsInInputs - userInputAmountNeeded,
+    amount: userSatsInInputs - userInputAmountNeeded - minerFee
   }
-  transactionBuilder.addOutput(userChangeOutput)
 
-  return await transactionBuilder.send()
+  // Transaction builiding with the simple transaction builder to enable debugging
+  cauldronContract.functions.swap()
+    .from(cauldronUtxo)
+    .fromP2PKH(userInputs, userTemplate)
+    .to([cauldronOuput, boughtTokensOutput, userChangeOutput])
+    .send()
 }
