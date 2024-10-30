@@ -6,9 +6,8 @@ import {
   SignatureTemplate,
   type Utxo,
 } from 'cashscript';
-// The cauldronArtifact contains a template variable <withdraw_pkh>
 import type { CauldronActivePool, CauldronGetActivePools } from './interfaces.js';
-import { cauldronContractWithPkh, convertPoolToUtxo } from './utils.js';
+import { cauldronArtifactWithPkh, convertPoolToUtxo } from './utils.js';
 
 export async function getCauldronPools(tokenId:string){ 
   const result = await fetch(`https://indexer.cauldron.quest/cauldron/pool/active?token=${tokenId}`)
@@ -37,8 +36,10 @@ export async function buyTokensPool(
 
 
   // Add the cauldron pool as an input to the transactionBuilder
+  // The cauldronArtifact contains a template variable <withdraw_pkh> which we need to replace
   const options = { provider, addressType:'p2sh32' as const };
-  const cauldronContract = new Contract(cauldronContractWithPkh(pool.owner_pkh), [], options);
+  const cauldronArtifact = cauldronArtifactWithPkh(pool.owner_pkh)
+  const cauldronContract = new Contract(cauldronArtifact, [], options);
 
   // calculate tradeValue and poolFee
   const poolConstant = pool.tokens * pool.sats

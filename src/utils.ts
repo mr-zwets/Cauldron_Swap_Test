@@ -2,7 +2,9 @@ import type { Artifact, Utxo } from 'cashscript';
 import cauldronArtifact from './artifact.json' with { type: 'json' };
 import { type CauldronActivePool } from './interfaces.js';
 
-export function cauldronContractWithPkh(pkhHex:string){
+// The cauldronArtifact contains a template variable <withdraw_pkh>
+// which we need to replace with the actual pkh of the pool owner
+export function cauldronArtifactWithPkh(pkhHex:string){
   const strigifiedCauldronArtifact = JSON.stringify(cauldronArtifact);
   return JSON.parse(strigifiedCauldronArtifact.replace('<withdraw_pkh>', pkhHex)) as Artifact
 }

@@ -4,7 +4,7 @@ import {
   randomUtxo,
 } from 'cashscript';
 import { buyTokensPool, getCauldronPools } from '../src/index.js';
-import { cauldronContractWithPkh, convertPoolToUtxo } from '../src/utils.js';
+import { cauldronArtifactWithPkh, convertPoolToUtxo } from '../src/utils.js';
 
 describe('Cauldron Swap Test', () => {
   it('Simulate buying 100 FURU tokens', async() => {
@@ -24,7 +24,7 @@ describe('Cauldron Swap Test', () => {
 
     // emulate FURU pool
     const options = { provider, addressType:'p2sh32' as const };
-    const cauldronContract = new Contract(cauldronContractWithPkh(poolTosUse.owner_pkh), [], options);
+    const cauldronContract = new Contract(cauldronArtifactWithPkh(poolTosUse.owner_pkh), [], options);
     provider.addUtxo(cauldronContract.address, convertPoolToUtxo(poolTosUse))
 
     await expect(buyTokensPool(
