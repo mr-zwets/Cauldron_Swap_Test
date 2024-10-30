@@ -23,7 +23,24 @@ const txid = await buyTokensPool(
 )
 ```
 
+## Run the Tests
+
+```
+npm i
+npm run test
+```
+
+or using yarn:
+
+```
+yarn
+yarn test
+```
+
 ## Difficulties
+
+- Cauldron contract doesn't have an official CashScript Artifact
+-> solution convert the whitepaper opcodes to CashScript asm (note the encoding of OP_2 & OP_3 and a missing OP_EQUALVERIFY opcode in the whitepaper)
 
 - CashScript doesn't currently support the `<withdraw_pkh>` templated variables in the middle of the contract code
 -> solved: replace the template string in the Artifact's `bytecode` before initalizing contract
