@@ -45,5 +45,8 @@ yarn test
 - CashScript doesn't currently support the `<withdraw_pkh>` templated variables in the middle of the contract code
 -> solved: replace the template string in the Artifact's `bytecode` before initalizing contract
 
+- Artifacts expect to use a `FunctionIndex` argument when there more than 1 `abi` function
+-> solved: use 2 separate Artifacts to represent the Cauldron contract
+
 - How to find all Cauldron contracts when they are all at unique addresses?
 -> solved: use their centralized endpoint for info for now

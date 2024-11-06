@@ -1,10 +1,13 @@
 import type { Artifact, Utxo } from 'cashscript';
-import cauldronArtifact from './artifact.json' with { type: 'json' };
+import cauldronSwapArtifact from './artifact/swap_artifact.json' with { type: 'json' };
+import cauldronManagePoolArtifact from './artifact/swap_artifact.json' with { type: 'json' };
 import { type CauldronActivePool } from './interfaces.js';
 
 // The cauldronArtifact contains a template variable <withdraw_pkh>
 // which we need to replace with the actual pkh of the pool owner
-export function cauldronArtifactWithPkh(pkhHex:string){
+// There is a separate artifact for swapping and managing pools
+export function cauldronArtifactWithPkh(pkhHex:string, swapArtifact:boolean=true){
+  const cauldronArtifact = swapArtifact ? cauldronSwapArtifact : cauldronManagePoolArtifact;
   const strigifiedCauldronArtifact = JSON.stringify(cauldronArtifact);
   return JSON.parse(strigifiedCauldronArtifact.replace('<withdraw_pkh>', pkhHex)) as Artifact
 }
