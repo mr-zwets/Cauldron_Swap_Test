@@ -6,12 +6,12 @@
       "name": "managePool",
       "inputs": [
         {
-          "name": "poolOwnerSig",
-          "type": "sig"
-        },
-        {
           "name": "poolOwnerPk",
           "type": "pubkey"
+        },
+        {
+          "name": "poolOwnerSig",
+          "type": "sig"
         }
       ]
     }

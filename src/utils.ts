@@ -1,6 +1,6 @@
 import type { Artifact, Utxo } from 'cashscript';
 import cauldronSwapArtifact from './artifact/swap_artifact.json' with { type: 'json' };
-import cauldronManagePoolArtifact from './artifact/swap_artifact.json' with { type: 'json' };
+import cauldronManagePoolArtifact from './artifact/managepool_artifact.json' with { type: 'json' };
 import { type CauldronActivePool } from './interfaces.js';
 
 // The cauldronArtifact contains a template variable <withdraw_pkh>
