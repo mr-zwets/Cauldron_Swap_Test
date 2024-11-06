@@ -3,12 +3,12 @@ import {
   MockNetworkProvider,
   randomUtxo,
 } from 'cashscript';
-import { buyTokensPool } from '../src/index.js';
+import { withdrawAllFromPool } from '../src/index.js';
 import { cauldronArtifactWithPkh, convertPoolToUtxo } from '../src/utils.js';
 import type { CauldronActivePool } from '../src/interfaces.js';
 
-describe('Cauldron Swap Test', () => {
-  it('Simulate buying 100 FURU tokens', async() => {
+describe('Cauldron ManagePool Test', () => {
+  it('Simulate withdrawAllFromPool by poolOwner', async() => {
     const provider = new MockNetworkProvider();
 
     // fake user address and wif
@@ -20,8 +20,8 @@ describe('Cauldron Swap Test', () => {
 
     // create test furu pool
     const testFuruPool: CauldronActivePool = {
-      owner_p2pkh_addr: "bitcoincash:zr8g5yrw0vzdc2evjgpjfwlsrn67d5wtqcjhnwf345",
-      owner_pkh: "ce8a106e7b04dc2b2c920324bbf01cf5e6d1cb06",
+      owner_p2pkh_addr: "bitcoincash:qps99uejnueu4dsv0dd2m9u9uzxntg66nyux08wmzq",
+      owner_pkh: "6052f3329f33cab60c7b5aad9785e08d35a35a99",
       sats: 587793838,
       token_id: "d9ab24ed15a7846cc3d9e004aa5cb976860f13dac1ead05784ee4f4622af96ea",
       tokens: 4363102,
@@ -34,9 +34,8 @@ describe('Cauldron Swap Test', () => {
     const cauldronContract = new Contract(cauldronArtifactWithPkh(testFuruPool.owner_pkh), [], options);
     provider.addUtxo(cauldronContract.address, convertPoolToUtxo(testFuruPool))
 
-    await expect(buyTokensPool(
+    await expect(withdrawAllFromPool(
       testFuruPool,
-      100,
       testUserTokenAddress,
       testUserWif,
       provider

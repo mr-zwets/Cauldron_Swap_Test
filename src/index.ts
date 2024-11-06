@@ -25,15 +25,14 @@ export async function parsePoolPrices(pools:CauldronActivePool[]){
 export async function buyTokensPool(
   pool:CauldronActivePool,
   amountToBuy:number,
-  userAddress:string,
+  userTokenAddress:string,
   privateKeyWif:string,
   provider:NetworkProvider = new ElectrumNetworkProvider('mainnet')
 ){
   const cauldronUtxo = convertPoolToUtxo(pool);
-  const userUtxos = await provider.getUtxos(userAddress);
+  const userUtxos = await provider.getUtxos(userTokenAddress);
   const userBchUtxos = userUtxos.filter(utxo => !utxo.token)
   const userBalanceSats = userBchUtxos.reduce((total, utxo) => total += utxo.satoshis, 0n);
-
 
   // Add the cauldron pool as an input to the transactionBuilder
   // The cauldronArtifact contains a template variable <withdraw_pkh> which we need to replace
@@ -53,7 +52,6 @@ export async function buyTokensPool(
   const sortedUserBchUtxos = userBchUtxos.sort((a, b) => Number(a.satoshis) - Number(b.satoshis))
 
   // add needed userInputs to the transactionBuilder
-  const userTemplate = new SignatureTemplate(privateKeyWif)
   let userSatsInInputs = 0n
   let userInputs:Utxo[]= []
   for(const userUtxo of sortedUserBchUtxos){
@@ -75,7 +73,7 @@ export async function buyTokensPool(
   }
 
   const boughtTokensOutput:Recipient = {
-    to: userAddress,
+    to: userTokenAddress,
     amount: 1000n,
     token: {
       category: pool.token_id,
@@ -85,14 +83,59 @@ export async function buyTokensPool(
 
   const minerFee = 400n + 200n * BigInt(userInputs.length)
   const userChangeOutput:Recipient  = {
-    to: userAddress,
+    to: userTokenAddress,
     amount: userSatsInInputs - userInputAmountNeeded - minerFee
   }
 
+  const userTemplate = new SignatureTemplate(privateKeyWif)
+
   // Transaction builiding with the simple transaction builder to enable debugging
-  cauldronContract.functions.swap()
+  const txid = cauldronContract.functions.swap()
     .from(cauldronUtxo)
     .fromP2PKH(userInputs, userTemplate)
     .to([cauldronOuput, boughtTokensOutput, userChangeOutput])
     .send()
+  return txid
+}
+
+export async function withdrawAllFromPool(
+  pool:CauldronActivePool,
+  userTokenAddress:string,
+  privateKeyWif:string,
+  provider:NetworkProvider = new ElectrumNetworkProvider('mainnet')
+){
+  const cauldronUtxo = convertPoolToUtxo(pool);
+
+  // Add the cauldron pool as an input to the transactionBuilder
+  // The cauldronArtifact contains a template variable <withdraw_pkh> which we need to replace
+  // add 'false' to use the managePool artifact
+  const options = { provider, addressType:'p2sh32' as const };
+  const cauldronArtifact = cauldronArtifactWithPkh(pool.owner_pkh, false)
+  const cauldronContract = new Contract(cauldronArtifact, [], options);
+
+  const minerFee = 500n
+  const bchOutputAmount = BigInt(pool.sats) - 1000n - minerFee
+
+  const userBchOutput:Recipient = {
+    to: userTokenAddress,
+    amount: bchOutputAmount
+  }
+
+  const userTokenOutput:Recipient = {
+    to: userTokenAddress,
+    amount: 1000n,
+    token: {
+      category: pool.token_id,
+      amount: BigInt(pool.tokens)
+    }
+  }
+  
+  const ownerTemplate = new SignatureTemplate(privateKeyWif)
+  const ownerPk = ownerTemplate.getPublicKey()
+  
+  const txid = await cauldronContract.functions.managePool(ownerPk, ownerTemplate)
+    .from(cauldronUtxo)
+    .to([userBchOutput, userTokenOutput])
+    .send()
+  return txid
 }

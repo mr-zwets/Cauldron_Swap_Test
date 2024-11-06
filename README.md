@@ -4,22 +4,40 @@ Cauldron Swap Test using the CashScript SDK
 
 **NOTE**: the code is still in development with very limited tests so proceed with great caution!
 
-## Usage
+## Swap Usage
 
 ```ts
 import { getCauldronPools, buyTokensPool } from "./index"
-import { userAddress, privateKeyWif } from "./somewhere"
+import { userTokenAddress, privateKeyWif } from "./somewhere"
 
 const furuTokenId = "d9ab24ed15a7846cc3d9e004aa5cb976860f13dac1ead05784ee4f4622af96ea"
 const cauldronPools = await getCauldronPools(furuTokenId)
 
 // select a cauldron pool based on price/pool size
-const poolTosUse = cauldronPools[0]
+const poolToUse = cauldronPools[0]
 const txid = await buyTokensPool(
-  pool: poolTosUse,
+  pool: poolToUse,
   amountToBuy: 100n,
-  userAddress,
+  userTokenAddress,
   privateKeyWif
+)
+```
+
+## ManagePool Usage
+```ts
+import { getCauldronPools, withdrawAllFromPool } from "./index"
+import { userTokenAddress, privateKeyWif } from "./somewhere"
+
+const furuTokenId = "d9ab24ed15a7846cc3d9e004aa5cb976860f13dac1ead05784ee4f4622af96ea"
+const poolOwnerAddress = "bitcoincash:qps99uejnueu4dsv0dd2m9u9uzxntg66nyux08wmzq" 
+const cauldronPools = await getCauldronPools(furuTokenId)
+
+// filter your pool
+const myPool = cauldronPools.filter(pool => pool.owner_p2pkh_addr == poolOwnerAddress)
+const txid = await withdrawAllFromPool(
+  pool: myPool,
+  userTokenAddress,
+  privateKeyWif,
 )
 ```
 
