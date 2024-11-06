@@ -7,13 +7,12 @@
   resolved "https://registry.yarnpkg.com/@bitauth/libauth/-/libauth-3.0.0.tgz#d88535fc5353d5ecd11db96d9a229e11c06a43d2"
   integrity sha512-3yoL31XpnhAnf5nDVMFk4xPqebxDwXrgYAwpa31ARJnV5A/eXWlpNYvCd6FTZPFM4VvKfjCBi+jRCrw1hOZ0Jg==
 
-"@cashscript/utils@^0.10.1":
-  version "0.10.1"
-  resolved "https://registry.yarnpkg.com/@cashscript/utils/-/utils-0.10.1.tgz#f65938cd2a75d4a166a42f3926dbe69ba65a5d88"
-  integrity sha512-Iyo19TarXobkZwW5C49sJMFE7CX6zSFth2f9jvlIEQ+j3/Dkm0nQqxDk+YIlQ+LDPQplwMTx8bnDsI8AI5AFTA==
+"@cashscript/utils@^0.10.2":
+  version "0.10.2"
+  resolved "https://registry.yarnpkg.com/@cashscript/utils/-/utils-0.10.2.tgz#0141e08092c6e6da238b83253358a9aa41fceda4"
+  integrity sha512-Wx0mMU8Hk7ZKVa1mKmHLsDkv3q5nfgb+uFHGUhlWoOREeDCwluGwhFHDNoe4DmyPrkz55k1KqqEGt0bd83TS0w==
   dependencies:
     "@bitauth/libauth" "^3.0.0"
-    hash.js "^1.1.7"
 
 "@esbuild/aix-ppc64@0.21.5":
   version "0.21.5"
@@ -134,6 +133,11 @@
   version "1.5.0"
   resolved "https://registry.yarnpkg.com/@jridgewell/sourcemap-codec/-/sourcemap-codec-1.5.0.tgz#3188bcb273a414b0d215fd22a58540b989b9409a"
   integrity sha512-gv3ZRaISU3fjPAgNsriBRqGWQL6quFx04YMPW/zD8XMLsU32mhCCbfbO6KZFLjvYpCZ8zyDEgqsgf+PwPaM7GQ==
+
+"@mr-zwets/bchn-api-wrapper@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@mr-zwets/bchn-api-wrapper/-/bchn-api-wrapper-1.0.1.tgz#1ecd9fca91ed7e33df9769e243ae04871d2d356f"
+  integrity sha512-EyKT6zgXh31JqTRsi+KCX04WPDjIqs80nfsafrKiUZTg8FgWzql1wSyYdggmeByB74yLHD0LouC40S8PMmvcZA==
 
 "@rollup/rollup-android-arm-eabi@4.24.3":
   version "4.24.3"
@@ -315,37 +319,19 @@ async-mutex@^0.3.1:
   dependencies:
     tslib "^2.3.1"
 
-bip68@^1.0.4:
-  version "1.0.4"
-  resolved "https://registry.yarnpkg.com/bip68/-/bip68-1.0.4.tgz#78a95c7a43fad183957995cc2e08d79b0c372c4d"
-  integrity sha512-O1htyufFTYy3EO0JkHg2CLykdXEtV2ssqw47Gq9A0WByp662xpJnMEB9m43LZjsSDjIAOozWRExlFQk2hlV1XQ==
-
-bitcoin-rpc-promise-retry@^1.3.0:
-  version "1.3.0"
-  resolved "https://registry.yarnpkg.com/bitcoin-rpc-promise-retry/-/bitcoin-rpc-promise-retry-1.3.0.tgz#28a9f5aa7b5528b0518b0bcccde63e7384e1626b"
-  integrity sha512-xhldBhYwiUNY4spzkXXcU9LEq+nbSKJ5tvYWEUe/XTCe1VYoe8tEb5jJq4MBA2d+5egiUOA+P1QTTYm1FqPtOg==
-  dependencies:
-    bitcoind-rpc "^0.8.0"
-
-bitcoind-rpc@^0.8.0:
-  version "0.8.1"
-  resolved "https://registry.yarnpkg.com/bitcoind-rpc/-/bitcoind-rpc-0.8.1.tgz#11889972e46c346870d26cf680e3a7e3e52b1ff1"
-  integrity sha512-NfhykAT/x/P1SOiog8UzltvTiv6A6d2X5VWJ3UjGeAqFLXv+IYHy+E4fFCBmgQRyIb1EIcyIZK1SVpSOGRHsaw==
-
 cac@^6.7.14:
   version "6.7.14"
   resolved "https://registry.yarnpkg.com/cac/-/cac-6.7.14.tgz#804e1e6f506ee363cb0e3ccbb09cad5dd9870959"
   integrity sha512-b6Ilus+c3RrdDk+JhLKUAQfzzgLEPy6wcXqS7f/xe1EETvsDP6GORG7SFuOs6cID5YkqchW/LXZbX5bc8j7ZcQ==
 
-cashscript@^0.10.1:
-  version "0.10.1"
-  resolved "https://registry.yarnpkg.com/cashscript/-/cashscript-0.10.1.tgz#06c637d78612b92ec47dffe9f57f303c68684387"
-  integrity sha512-o0dkSOQMVCtiFx7RpV3HQLETHdPr5GCLdbduRm3etWEJ227fNGtqQere7x02wg1Iu2MO0FDb8+RrGMdc6RYdeg==
+cashscript@^0.10.2:
+  version "0.10.2"
+  resolved "https://registry.yarnpkg.com/cashscript/-/cashscript-0.10.2.tgz#a4c58b20f43649c01fb9da9053ab7efbc78b44b0"
+  integrity sha512-Bs1gRrcVaeBMiv2pg9C65X8OMVxtgTufG4wbEsyaFg5KUPDJDooa2G8yJnLgd7Z/EgKSHGgCMlJs4KYZvSfE5Q==
   dependencies:
     "@bitauth/libauth" "^3.0.0"
-    "@cashscript/utils" "^0.10.1"
-    bip68 "^1.0.4"
-    bitcoin-rpc-promise-retry "^1.3.0"
+    "@cashscript/utils" "^0.10.2"
+    "@mr-zwets/bchn-api-wrapper" "^1.0.1"
     delay "^5.0.0"
     electrum-cash "^2.0.10"
     fast-deep-equal "^3.1.3"
@@ -446,19 +432,6 @@ fsevents@~2.3.2, fsevents@~2.3.3:
   resolved "https://registry.yarnpkg.com/fsevents/-/fsevents-2.3.3.tgz#cac6407785d03675a2a5e1a5305c697b347d90d6"
   integrity sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==
 
-hash.js@^1.1.7:
-  version "1.1.7"
-  resolved "https://registry.yarnpkg.com/hash.js/-/hash.js-1.1.7.tgz#0babca538e8d4ee4a0f8988d68866537a003cf42"
-  integrity sha512-taOaskGt4z4SOANNseOviYDvjEJinIkRgmp7LbKP2YTTmVxWBl87s/uzK9r+44BclBSp2X7K1hqeNfz9JbBeXA==
-  dependencies:
-    inherits "^2.0.3"
-    minimalistic-assert "^1.0.1"
-
-inherits@^2.0.3:
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/inherits/-/inherits-2.0.4.tgz#0fa2c64f932917c3433a0ded55363aae37416b7c"
-  integrity sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==
-
 isomorphic-ws@^4.0.1:
   version "4.0.1"
   resolved "https://registry.yarnpkg.com/isomorphic-ws/-/isomorphic-ws-4.0.1.tgz#55fd4cd6c5e6491e76dc125938dd863f5cd4f2dc"
@@ -475,11 +448,6 @@ magic-string@^0.30.12:
   integrity sha512-Ea8I3sQMVXr8JhN4z+H/d8zwo+tYDgHE9+5G4Wnrwhs0gaK9fXTKx0Tw5Xwsd/bCPTTZNRAdpyzvoeORe9LYpw==
   dependencies:
     "@jridgewell/sourcemap-codec" "^1.5.0"
-
-minimalistic-assert@^1.0.1:
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/minimalistic-assert/-/minimalistic-assert-1.0.1.tgz#2e194de044626d4a10e7f7fbc00ce73e83e4d5c7"
-  integrity sha512-UtJcAD4yEaGtjPezWuO9wC4nwUnVH/8/Im3yEHQP4b67cXlD/Qr9hdITCU1xDbSEXg2XKNaP8jsReV7vQd00/A==
 
 ms@^2.1.3:
   version "2.1.3"

@@ -10,7 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "cashscript": "^0.10.1"
+    "cashscript": "^0.10.2"
   },
   "devDependencies": {
     "vitest": "^2.1.4"
