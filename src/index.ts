@@ -4,6 +4,7 @@ import {
   type NetworkProvider,
   type Recipient,
   SignatureTemplate,
+  TransactionBuilder,
   type Utxo,
 } from 'cashscript';
 import type { CauldronActivePool, CauldronGetActivePools } from './interfaces.js';
@@ -90,10 +91,10 @@ export async function buyTokensPool(
   const userTemplate = new SignatureTemplate(privateKeyWif)
 
   // Transaction builiding with the simple transaction builder to enable debugging
-  const txid = cauldronContract.functions.swap()
-    .from(cauldronUtxo)
-    .fromP2PKH(userInputs, userTemplate)
-    .to([cauldronOuput, boughtTokensOutput, userChangeOutput])
+  const txid = await new TransactionBuilder({provider})
+    .addInput(cauldronUtxo, cauldronContract.unlock.swap())
+    .addInputs(userInputs, userTemplate.unlockP2PKH())
+    .addOutputs([cauldronOuput, boughtTokensOutput, userChangeOutput])
     .send()
   return txid
 }
@@ -133,9 +134,9 @@ export async function withdrawAllFromPool(
   const ownerTemplate = new SignatureTemplate(privateKeyWif)
   const ownerPk = ownerTemplate.getPublicKey()
   
-  const txid = await cauldronContract.functions.managePool(ownerPk, ownerTemplate)
-    .from(cauldronUtxo)
-    .to([userBchOutput, userTokenOutput])
+  const txid = await new TransactionBuilder({provider})
+    .addInput(cauldronUtxo, cauldronContract.unlock.managePool(ownerPk, ownerTemplate))
+    .addOutputs([userBchOutput, userTokenOutput])
     .send()
   return txid
 }
