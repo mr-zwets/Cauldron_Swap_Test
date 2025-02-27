@@ -57,14 +57,15 @@ yarn test
 
 ## Difficulties
 
-- Cauldron contract doesn't have an official CashScript Artifact
+- The Cauldron contract doesn't have a CashScript Artifact as it's written in raw BCH Script
 -> solution convert the whitepaper opcodes to CashScript asm (note the encoding of OP_2 & OP_3 and a missing OP_EQUALVERIFY opcode in the whitepaper)
 
-- CashScript doesn't currently support the `<withdraw_pkh>` templated variables in the middle of the contract code
+- CashScript Artifacts currently don't support the `<withdraw_pkh>` templated variables in the middle of the contract code
 -> solved: replace the template string in the Artifact's `bytecode` before initalizing contract
 
-- Artifacts expect to use a `FunctionIndex` argument when there more than 1 `abi` function
+- Artifact expects to use a `FunctionIndex` argument when there more than 1 `abi` function
 -> solved: use 2 separate Artifacts to represent the Cauldron contract
 
 - How to find all Cauldron contracts when they are all at unique addresses?
--> solved: use their centralized endpoint for info for now
+-> solved: use the Cauldron centralized endpoint for info for now
+other solution: Caulron txs are marked on-chain with OPRETURN `SUMMON <PKH>`
