@@ -9,7 +9,10 @@ import { type CauldronActivePool } from './interfaces.js';
 export function cauldronArtifactWithPkh(pkhHex:string, swapArtifact:boolean=true){
   const cauldronArtifact = swapArtifact ? cauldronSwapArtifact : cauldronManagePoolArtifact;
   const strigifiedCauldronArtifact = JSON.stringify(cauldronArtifact);
-  return JSON.parse(strigifiedCauldronArtifact.replace('<withdraw_pkh>', pkhHex)) as Artifact
+  const constructedArtifact = JSON.parse(strigifiedCauldronArtifact.replace('<withdraw_pkh>', pkhHex)) as Artifact
+  // different contracts should have unique names
+  constructedArtifact.contractName = swapArtifact ? `CauldronSwap ${pkhHex}` : `CauldronManagePool ${pkhHex}`;
+  return constructedArtifact
 }
 
 export function convertPoolToUtxo(pool: CauldronActivePool):Utxo{
