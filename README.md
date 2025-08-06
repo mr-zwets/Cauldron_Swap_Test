@@ -48,11 +48,11 @@ npm i
 npm run test
 ```
 
-or using yarn:
+or using pnpm:
 
 ```
-yarn
-yarn test
+pnpm
+pnpm run test
 ```
 
 ## Difficulties

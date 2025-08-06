@@ -6,13 +6,13 @@
   },
   "type": "module",
   "keywords": [],
-  "author": "",
+  "author": "Mathieu Geukens",
   "license": "ISC",
-  "description": "",
+  "description": "Cauldron Swap Test using the CashScript SDK",
   "dependencies": {
-    "cashscript": "^0.11.0"
+    "cashscript": "^0.11.4"
   },
   "devDependencies": {
-    "vitest": "3.1.1"
+    "vitest": "3.2.4"
   }
 }
