@@ -10,7 +10,7 @@
   "license": "ISC",
   "description": "Cauldron Swap Test using the CashScript SDK",
   "dependencies": {
-    "cashscript": "^0.11.4"
+    "cashscript": "^0.12.0"
   },
   "devDependencies": {
     "vitest": "3.2.4"
