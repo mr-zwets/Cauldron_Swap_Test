@@ -10,8 +10,10 @@ import {
 import type { CauldronActivePool, CauldronGetActivePools } from './interfaces.js';
 import { cauldronArtifactWithPkh, convertPoolToUtxo } from './utils.js';
 
+export const CAULDRON_INDEXER_URL = 'https://indexer.cauldron.quest/cauldron';
+
 export async function getCauldronPools(tokenId:string){ 
-  const result = await fetch(`https://indexer.cauldron.quest/cauldron/pool/active?token=${tokenId}`)
+  const result = await fetch(`${CAULDRON_INDEXER_URL}/active?token=${tokenId}`)
   return (await result.json() as CauldronGetActivePools).active
 }
 
