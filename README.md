@@ -13,7 +13,7 @@ import { getCauldronPools, buyTokensPool } from "./index"
 import { userTokenAddress, privateKeyWif } from "./somewhere"
 
 const furuTokenId = "d9ab24ed15a7846cc3d9e004aa5cb976860f13dac1ead05784ee4f4622af96ea"
-const amountToBuy = 100n
+const amountToBuy = 100
 
 // fetch pools for tokenId
 const cauldronPools = await getCauldronPools(furuTokenId) 
@@ -22,7 +22,7 @@ const cauldronPools = await getCauldronPools(furuTokenId)
 const poolToUse = cauldronPools[0]
 
 // buy tokens from pool
-const txid = await buyTokensPool(
+const txDetails = await buyTokensPool(
   poolToUse,
   amountToBuy,
   userTokenAddress,
@@ -44,7 +44,7 @@ const cauldronPools = await getCauldronPools(furuTokenId)
 const poolToUse = cauldronPools.find(pool => pool.owner_p2pkh_addr == poolOwnerAddress)
 
 // withdraw liquidity from your pool
-const txid = await withdrawAllFromPool(
+const txDetails = await withdrawAllFromPool(
   poolToUse,
   userTokenAddress,
   privateKeyWif,
@@ -55,7 +55,7 @@ const txid = await withdrawAllFromPool(
 
 The Cauldron contract does not have a ready-to-go CashScript artifact, so custom artifacts were created to be able to use the CashScript SDK tooling.
 
-You can see the JSON artifacts in `src/artifact` and find and explanation of this in `artifacts.md`
+You can see the JSON artifacts in `src/artifact` and find an explanation of this in `artifacts.md`
 
 ## Run the Tests
 
@@ -74,5 +74,7 @@ pnpm run test
 ## Future Extensions
 
 - add a `sellTokensPool` function
-- allow for aggregating acorss multiple pools
+- allow for aggregating across multiple pools
+- validate user addresses to be token-aware
+- validate pool ownership in `withdrawAllFromPool`
 - allow to find the the contracts on-chain with op_returns instead of through a trusted API
