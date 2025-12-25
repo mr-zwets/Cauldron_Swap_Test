@@ -75,6 +75,4 @@ pnpm run test
 
 - add a `sellTokensPool` function
 - allow for aggregating across multiple pools
-- validate user addresses to be token-aware
-- validate pool ownership in `withdrawAllFromPool`
 - allow to find the the contracts on-chain with op_returns instead of through a trusted API

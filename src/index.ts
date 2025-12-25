@@ -7,6 +7,7 @@ import {
   type Recipient,
   type Utxo,
 } from 'cashscript';
+import { binToHex, hash160 } from '@bitauth/libauth'
 import type { CauldronActivePool, CauldronGetActivePools } from './interfaces.js';
 import { cauldronArtifactWithPkh, convertPoolToUtxo } from './utils.js';
 
@@ -35,7 +36,7 @@ export async function buyTokensPool(
   // convert pool object to UTXO format
   const cauldronUtxo = convertPoolToUtxo(pool);
 
-  // TODO: validate user address to be a token address
+  // Does not explicitly validate user address to be a token address, but will fail later if not
 
   // fetch user UTXOs
   const userUtxos = await provider.getUtxos(userTokenAddress);
@@ -113,8 +114,16 @@ export async function withdrawAllFromPool(
   // convert pool object to UTXO format
   const cauldronUtxo = convertPoolToUtxo(pool);
 
-  // TODO: validate user address to be a token address
-  // TODO: validate that the user is the owner of the pool
+  // Does not explicitly validate user address to be a token address, but will fail later if not
+
+  const ownerTemplate = new SignatureTemplate(privateKeyWif)
+  const ownerPk = ownerTemplate.getPublicKey()
+
+  // Derive owner pkh from provided private key and compare to pool owner pkh
+  const ownerPkh = binToHex(hash160((ownerPk)))
+  if(pool.owner_pkh !== ownerPkh){
+    throw new Error('Provided private key does not match pool owner')
+  }
 
   // Get the specific cauldron contract for the selected pool (based on owner pkh)
   // add 'false' to use the managePool artifact
@@ -138,9 +147,6 @@ export async function withdrawAllFromPool(
       amount: BigInt(pool.tokens)
     }
   }
-  
-  const ownerTemplate = new SignatureTemplate(privateKeyWif)
-  const ownerPk = ownerTemplate.getPublicKey()
   
   const txDetails = await new TransactionBuilder({ provider })
     .addInput(cauldronUtxo, cauldronContract.unlock.managePool(ownerPk, ownerTemplate))
