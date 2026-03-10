@@ -11,11 +11,18 @@ import { binToHex, hash160 } from '@bitauth/libauth'
 import type { CauldronActivePool, CauldronGetActivePools } from './interfaces.js';
 import { cauldronArtifactWithPkh, convertPoolToUtxo } from './utils.js';
 
-export const CAULDRON_INDEXER_URL = 'https://indexer.cauldron.quest/cauldron';
+export type CauldronNetwork = 'mainnet' | 'chipnet';
 
-export async function getCauldronPools(tokenId:string){
-  const result = await fetch(`${CAULDRON_INDEXER_URL}/pool/active?token=${tokenId}`)
-  return (await result.json() as CauldronGetActivePools).active
+export const CAULDRON_INDEXER_URLS: Record<CauldronNetwork, string> = {
+  mainnet: 'https://indexer.cauldron.quest/cauldron',
+  chipnet: 'https://indexer-chipnet.riften.net/cauldron',
+};
+
+export async function getCauldronPools(tokenId:string, network:CauldronNetwork = 'mainnet'){
+  const indexerUrl = CAULDRON_INDEXER_URLS[network];
+  const result = await fetch(`${indexerUrl}/pool/active?token=${tokenId}`)
+  const data = await result.json() as CauldronGetActivePools
+  return data.active
 }
 
 export async function parsePoolPrices(pools:CauldronActivePool[]){

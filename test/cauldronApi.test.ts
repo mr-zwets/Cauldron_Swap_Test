@@ -7,4 +7,11 @@ describe('Cauldron API Test', () => {
 
     expect(Array.isArray(cauldronPools)).toBe(true)
   });
+
+  it('Get Active chipnet pools', async() => {
+    const chipnetTokenId = "53636bc8c1afbe35a7ba169eadfac0aebadeacf96954a9a066a483e885580ed4"
+    const cauldronPools = await getCauldronPools(chipnetTokenId, 'chipnet')
+
+    expect(Array.isArray(cauldronPools)).toBe(true)
+  });
 });

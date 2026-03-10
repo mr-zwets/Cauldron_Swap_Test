@@ -51,6 +51,32 @@ const txDetails = await withdrawAllFromPool(
 )
 ```
 
+## Chipnet Usage
+
+```ts
+import { ElectrumNetworkProvider } from 'cashscript';
+import { getCauldronPools, buyTokensPool } from "./index"
+import { userTokenAddress, privateKeyWif } from "./somewhere"
+
+const chipnetTokenId = "53636bc8c1afbe35a7ba169eadfac0aebadeacf96954a9a066a483e885580ed4"
+const amountToBuy = 100
+
+// fetch pools from chipnet indexer
+const cauldronPools = await getCauldronPools(chipnetTokenId, 'chipnet')
+
+const poolToUse = cauldronPools[0]
+
+// use a chipnet provider for the transaction
+const provider = new ElectrumNetworkProvider('chipnet')
+const txDetails = await buyTokensPool(
+  poolToUse,
+  amountToBuy,
+  userTokenAddress,
+  privateKeyWif,
+  provider
+)
+```
+
 ## Custom Arifacts
 
 The Cauldron contract does not have a ready-to-go CashScript artifact, so custom artifacts were created to be able to use the CashScript SDK tooling.
