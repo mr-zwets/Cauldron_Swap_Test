@@ -2,28 +2,28 @@ import type { CauldronActivePool, PoolAllocation } from './interfaces.js';
 
 const RATE_DENOMINATOR = 10n ** 13n;
 
-export function isqrt(n: bigint): bigint {
-  if (n < 0n) throw new Error('isqrt of negative number');
-  if (n === 0n) return 0n;
-  let x = n;
-  let y = (x + 1n) / 2n;
-  while (y < x) {
-    x = y;
-    y = (x + n / x) / 2n;
+export function isqrt(value: bigint): bigint {
+  if (value < 0n) throw new Error('isqrt of negative number');
+  if (value === 0n) return 0n;
+  let current = value;
+  let next = (current + 1n) / 2n;
+  while (next < current) {
+    current = next;
+    next = (current + value / current) / 2n;
   }
-  return x;
+  return current;
 }
 
-export function ceilDiv(a: bigint, b: bigint): bigint {
-  return (a + b - 1n) / b;
+export function ceilDiv(numerator: bigint, denominator: bigint): bigint {
+  return (numerator + denominator - 1n) / denominator;
 }
 
 export function calcBuyFromPool(pool: CauldronActivePool, demandTokens: bigint): { supplyAmount: bigint; feeAmount: bigint } {
   if (demandTokens === 0n) return { supplyAmount: 0n, feeAmount: 0n };
-  const K = BigInt(pool.tokens) * BigInt(pool.sats);
+  const poolConstantK = BigInt(pool.tokens) * BigInt(pool.sats);
   const newTokens = BigInt(pool.tokens) - demandTokens;
   if (newTokens <= 0n) throw new Error('Cannot buy more tokens than pool has');
-  const newSatsExclFee = ceilDiv(K, newTokens);
+  const newSatsExclFee = ceilDiv(poolConstantK, newTokens);
   const tradeValue = newSatsExclFee - BigInt(pool.sats);
   const feeAmount = tradeValue * 3n / 1000n;
   const supplyAmount = tradeValue + feeAmount;
@@ -32,9 +32,9 @@ export function calcBuyFromPool(pool: CauldronActivePool, demandTokens: bigint):
 
 export function calcSellToPool(pool: CauldronActivePool, demandTokens: bigint): { supplyAmount: bigint; feeAmount: bigint } {
   if (demandTokens === 0n) return { supplyAmount: 0n, feeAmount: 0n };
-  const K = BigInt(pool.tokens) * BigInt(pool.sats);
+  const poolConstantK = BigInt(pool.tokens) * BigInt(pool.sats);
   const newTokens = BigInt(pool.tokens) + demandTokens;
-  const newSatsExclFee = ceilDiv(K, newTokens);
+  const newSatsExclFee = ceilDiv(poolConstantK, newTokens);
   const tradeValue = BigInt(pool.sats) - newSatsExclFee;
   if (tradeValue <= 0n) return { supplyAmount: 0n, feeAmount: 0n };
   const feeAmount = tradeValue * 3n / 1000n;
@@ -42,22 +42,22 @@ export function calcSellToPool(pool: CauldronActivePool, demandTokens: bigint): 
   return { supplyAmount, feeAmount };
 }
 
-function marginalRate(K: bigint, tokens: bigint): bigint {
-  return K * RATE_DENOMINATOR / (tokens * tokens);
+function marginalRate(poolConstantK: bigint, tokens: bigint): bigint {
+  return poolConstantK * RATE_DENOMINATOR / (tokens * tokens);
 }
 
 function solveBuyAllocations(
   pools: CauldronActivePool[],
   totalTokensToBuy: bigint
 ): Array<{ pool: CauldronActivePool; demand: bigint }> {
-  const poolData = pools.map(p => ({
-    pool: p,
-    K: BigInt(p.tokens) * BigInt(p.sats),
-    tokens: BigInt(p.tokens),
+  const poolData = pools.map(pool => ({
+    pool,
+    poolConstantK: BigInt(pool.tokens) * BigInt(pool.sats),
+    tokens: BigInt(pool.tokens),
   }));
 
   // Check total liquidity (leave at least 1 token in each pool)
-  const totalLiquidity = poolData.reduce((sum, pd) => sum + pd.tokens - 1n, 0n);
+  const totalLiquidity = poolData.reduce((sum, poolInfo) => sum + poolInfo.tokens - 1n, 0n);
   if (totalLiquidity < totalTokensToBuy) {
     throw new Error('Insufficient liquidity across all pools');
   }
@@ -66,18 +66,18 @@ function solveBuyAllocations(
   // At rate r, pool i provides demand = tokens_i - isqrt(K_i * RD / r) (if positive)
   // Higher rate → more demand
   let low = 0n;
-  let high = poolData.reduce((max, pd) => {
-    const r = pd.K * RATE_DENOMINATOR; // rate when pool has 1 token
-    return r > max ? r : max;
+  let high = poolData.reduce((maxRate, poolInfo) => {
+    const rate = poolInfo.poolConstantK * RATE_DENOMINATOR; // rate when pool has 1 token
+    return rate > maxRate ? rate : maxRate;
   }, 0n);
 
   while (high - low > 1n) {
     const mid = (low + high) / 2n;
     let totalDemand = 0n;
-    for (const pd of poolData) {
-      const newTokens = isqrt(pd.K * RATE_DENOMINATOR / mid);
-      if (newTokens < pd.tokens) {
-        totalDemand += pd.tokens - newTokens;
+    for (const poolInfo of poolData) {
+      const newTokens = isqrt(poolInfo.poolConstantK * RATE_DENOMINATOR / mid);
+      if (newTokens < poolInfo.tokens) {
+        totalDemand += poolInfo.tokens - newTokens;
       }
     }
     if (totalDemand >= totalTokensToBuy) {
@@ -89,28 +89,28 @@ function solveBuyAllocations(
 
   // Compute allocations at rate = high (gives demand >= target)
   const allocations: Array<{ pool: CauldronActivePool; demand: bigint }> = [];
-  for (const pd of poolData) {
-    const newTokens = isqrt(pd.K * RATE_DENOMINATOR / high);
-    if (newTokens < pd.tokens) {
-      allocations.push({ pool: pd.pool, demand: pd.tokens - newTokens });
+  for (const poolInfo of poolData) {
+    const newTokens = isqrt(poolInfo.poolConstantK * RATE_DENOMINATOR / high);
+    if (newTokens < poolInfo.tokens) {
+      allocations.push({ pool: poolInfo.pool, demand: poolInfo.tokens - newTokens });
     }
   }
 
   // Stepper: adjust total to exactly match target
-  let totalDemand = allocations.reduce((sum, a) => sum + a.demand, 0n);
+  let totalDemand = allocations.reduce((sum, allocation) => sum + allocation.demand, 0n);
 
   // If overshot, remove 1 token at a time from pool with highest marginal rate
   while (totalDemand > totalTokensToBuy) {
     let worstIdx = 0;
     let worstRate = -1n;
-    for (let i = 0; i < allocations.length; i++) {
-      const a = allocations[i];
-      const K = BigInt(a.pool.tokens) * BigInt(a.pool.sats);
-      const newTokens = BigInt(a.pool.tokens) - a.demand;
-      const rate = marginalRate(K, newTokens);
+    for (let idx = 0; idx < allocations.length; idx++) {
+      const allocation = allocations[idx];
+      const poolConstantK = BigInt(allocation.pool.tokens) * BigInt(allocation.pool.sats);
+      const newTokens = BigInt(allocation.pool.tokens) - allocation.demand;
+      const rate = marginalRate(poolConstantK, newTokens);
       if (rate > worstRate) {
         worstRate = rate;
-        worstIdx = i;
+        worstIdx = idx;
       }
     }
     allocations[worstIdx].demand -= 1n;
@@ -125,25 +125,25 @@ function solveBuyAllocations(
     let bestIdx = -1;
     let bestRate = 2n ** 128n;
 
-    for (let i = 0; i < allocations.length; i++) {
-      const a = allocations[i];
-      const K = BigInt(a.pool.tokens) * BigInt(a.pool.sats);
-      const newTokens = BigInt(a.pool.tokens) - a.demand - 1n;
+    for (let idx = 0; idx < allocations.length; idx++) {
+      const allocation = allocations[idx];
+      const poolConstantK = BigInt(allocation.pool.tokens) * BigInt(allocation.pool.sats);
+      const newTokens = BigInt(allocation.pool.tokens) - allocation.demand - 1n;
       if (newTokens <= 0n) continue;
-      const rate = marginalRate(K, newTokens);
+      const rate = marginalRate(poolConstantK, newTokens);
       if (rate < bestRate) {
         bestRate = rate;
-        bestIdx = i;
+        bestIdx = idx;
       }
     }
 
     // Consider pools not yet in allocations
-    for (const pd of poolData) {
-      if (allocations.some(a => a.pool === pd.pool)) continue;
-      const rate = marginalRate(pd.K, pd.tokens - 1n);
+    for (const poolInfo of poolData) {
+      if (allocations.some(allocation => allocation.pool === poolInfo.pool)) continue;
+      const rate = marginalRate(poolInfo.poolConstantK, poolInfo.tokens - 1n);
       if (rate < bestRate) {
         bestRate = rate;
-        allocations.push({ pool: pd.pool, demand: 0n });
+        allocations.push({ pool: poolInfo.pool, demand: 0n });
         bestIdx = allocations.length - 1;
       }
     }
@@ -153,35 +153,35 @@ function solveBuyAllocations(
     totalDemand += 1n;
   }
 
-  return allocations.filter(a => a.demand > 0n);
+  return allocations.filter(allocation => allocation.demand > 0n);
 }
 
 function solveSellAllocations(
   pools: CauldronActivePool[],
   totalTokensToSell: bigint
 ): Array<{ pool: CauldronActivePool; demand: bigint }> {
-  const poolData = pools.map(p => ({
-    pool: p,
-    K: BigInt(p.tokens) * BigInt(p.sats),
-    tokens: BigInt(p.tokens),
+  const poolData = pools.map(pool => ({
+    pool,
+    poolConstantK: BigInt(pool.tokens) * BigInt(pool.sats),
+    tokens: BigInt(pool.tokens),
   }));
 
   // For selling: at rate r, pool i accepts: isqrt(K_i * RD / r) - tokens_i (if positive)
   // Lower rate → more demand
 
   // Binary search
-  let high = poolData.reduce((max, pd) => {
-    const r = marginalRate(pd.K, pd.tokens);
-    return r > max ? r : max;
+  let high = poolData.reduce((maxRate, poolInfo) => {
+    const rate = marginalRate(poolInfo.poolConstantK, poolInfo.tokens);
+    return rate > maxRate ? rate : maxRate;
   }, 0n);
   let low = 1n;
 
   // Check if sufficient liquidity at minimum rate
   let demandAtLow = 0n;
-  for (const pd of poolData) {
-    const newTokens = isqrt(pd.K * RATE_DENOMINATOR / low);
-    if (newTokens > pd.tokens) {
-      demandAtLow += newTokens - pd.tokens;
+  for (const poolInfo of poolData) {
+    const newTokens = isqrt(poolInfo.poolConstantK * RATE_DENOMINATOR / low);
+    if (newTokens > poolInfo.tokens) {
+      demandAtLow += newTokens - poolInfo.tokens;
     }
   }
   if (demandAtLow < totalTokensToSell) {
@@ -191,10 +191,10 @@ function solveSellAllocations(
   while (high - low > 1n) {
     const mid = (low + high) / 2n;
     let totalDemand = 0n;
-    for (const pd of poolData) {
-      const newTokens = isqrt(pd.K * RATE_DENOMINATOR / mid);
-      if (newTokens > pd.tokens) {
-        totalDemand += newTokens - pd.tokens;
+    for (const poolInfo of poolData) {
+      const newTokens = isqrt(poolInfo.poolConstantK * RATE_DENOMINATOR / mid);
+      if (newTokens > poolInfo.tokens) {
+        totalDemand += newTokens - poolInfo.tokens;
       }
     }
     if (totalDemand >= totalTokensToSell) {
@@ -206,28 +206,28 @@ function solveSellAllocations(
 
   // Compute allocations at rate = low (gives demand >= target)
   const allocations: Array<{ pool: CauldronActivePool; demand: bigint }> = [];
-  for (const pd of poolData) {
-    const newTokens = isqrt(pd.K * RATE_DENOMINATOR / low);
-    if (newTokens > pd.tokens) {
-      allocations.push({ pool: pd.pool, demand: newTokens - pd.tokens });
+  for (const poolInfo of poolData) {
+    const newTokens = isqrt(poolInfo.poolConstantK * RATE_DENOMINATOR / low);
+    if (newTokens > poolInfo.tokens) {
+      allocations.push({ pool: poolInfo.pool, demand: newTokens - poolInfo.tokens });
     }
   }
 
   // Stepper: adjust total to exactly match target
-  let totalDemand = allocations.reduce((sum, a) => sum + a.demand, 0n);
+  let totalDemand = allocations.reduce((sum, allocation) => sum + allocation.demand, 0n);
 
   // If overshot, remove 1 token from pool with lowest current marginal rate (worst for seller)
   while (totalDemand > totalTokensToSell) {
     let worstIdx = 0;
     let worstRate = 2n ** 128n;
-    for (let i = 0; i < allocations.length; i++) {
-      const a = allocations[i];
-      const K = BigInt(a.pool.tokens) * BigInt(a.pool.sats);
-      const newTokens = BigInt(a.pool.tokens) + a.demand;
-      const rate = marginalRate(K, newTokens);
+    for (let idx = 0; idx < allocations.length; idx++) {
+      const allocation = allocations[idx];
+      const poolConstantK = BigInt(allocation.pool.tokens) * BigInt(allocation.pool.sats);
+      const newTokens = BigInt(allocation.pool.tokens) + allocation.demand;
+      const rate = marginalRate(poolConstantK, newTokens);
       if (rate < worstRate) {
         worstRate = rate;
-        worstIdx = i;
+        worstIdx = idx;
       }
     }
     allocations[worstIdx].demand -= 1n;
@@ -242,24 +242,24 @@ function solveSellAllocations(
     let bestIdx = -1;
     let bestRate = -1n;
 
-    for (let i = 0; i < allocations.length; i++) {
-      const a = allocations[i];
-      const K = BigInt(a.pool.tokens) * BigInt(a.pool.sats);
-      const newTokens = BigInt(a.pool.tokens) + a.demand + 1n;
-      const rate = marginalRate(K, newTokens);
+    for (let idx = 0; idx < allocations.length; idx++) {
+      const allocation = allocations[idx];
+      const poolConstantK = BigInt(allocation.pool.tokens) * BigInt(allocation.pool.sats);
+      const newTokens = BigInt(allocation.pool.tokens) + allocation.demand + 1n;
+      const rate = marginalRate(poolConstantK, newTokens);
       if (rate > bestRate) {
         bestRate = rate;
-        bestIdx = i;
+        bestIdx = idx;
       }
     }
 
     // Consider pools not yet in allocations
-    for (const pd of poolData) {
-      if (allocations.some(a => a.pool === pd.pool)) continue;
-      const rate = marginalRate(pd.K, pd.tokens + 1n);
+    for (const poolInfo of poolData) {
+      if (allocations.some(allocation => allocation.pool === poolInfo.pool)) continue;
+      const rate = marginalRate(poolInfo.poolConstantK, poolInfo.tokens + 1n);
       if (rate > bestRate) {
         bestRate = rate;
-        allocations.push({ pool: pd.pool, demand: 0n });
+        allocations.push({ pool: poolInfo.pool, demand: 0n });
         bestIdx = allocations.length - 1;
       }
     }
@@ -269,7 +269,7 @@ function solveSellAllocations(
     totalDemand += 1n;
   }
 
-  return allocations.filter(a => a.demand > 0n);
+  return allocations.filter(allocation => allocation.demand > 0n);
 }
 
 export function computeOptimalBuy(
@@ -297,14 +297,14 @@ export function computeOptimalBuy(
       }
 
       const currentTotalCost = allocations.reduce(
-        (sum, a) => sum + calcBuyFromPool(a.pool, a.demand).supplyAmount, 0n
+        (sum, allocation) => sum + calcBuyFromPool(allocation.pool, allocation.demand).supplyAmount, 0n
       );
 
-      const remainingPools = allocations.slice(1).map(a => a.pool);
+      const remainingPools = allocations.slice(1).map(allocation => allocation.pool);
       try {
         const newAllocations = solveBuyAllocations(remainingPools, totalTokensToBuy);
         const newTotalCost = newAllocations.reduce(
-          (sum, a) => sum + calcBuyFromPool(a.pool, a.demand).supplyAmount, 0n
+          (sum, allocation) => sum + calcBuyFromPool(allocation.pool, allocation.demand).supplyAmount, 0n
         );
 
         if (newTotalCost - currentTotalCost < poolByteCost) {
@@ -317,9 +317,9 @@ export function computeOptimalBuy(
     }
   }
 
-  return allocations.map(a => {
-    const { supplyAmount, feeAmount } = calcBuyFromPool(a.pool, a.demand);
-    return { pool: a.pool, demandAmount: a.demand, supplyAmount, feeAmount };
+  return allocations.map(allocation => {
+    const { supplyAmount, feeAmount } = calcBuyFromPool(allocation.pool, allocation.demand);
+    return { pool: allocation.pool, demandAmount: allocation.demand, supplyAmount, feeAmount };
   });
 }
 
@@ -348,14 +348,14 @@ export function computeOptimalSell(
       }
 
       const currentTotalReceived = allocations.reduce(
-        (sum, a) => sum + calcSellToPool(a.pool, a.demand).supplyAmount, 0n
+        (sum, allocation) => sum + calcSellToPool(allocation.pool, allocation.demand).supplyAmount, 0n
       );
 
-      const remainingPools = allocations.slice(1).map(a => a.pool);
+      const remainingPools = allocations.slice(1).map(allocation => allocation.pool);
       try {
         const newAllocations = solveSellAllocations(remainingPools, totalTokensToSell);
         const newTotalReceived = newAllocations.reduce(
-          (sum, a) => sum + calcSellToPool(a.pool, a.demand).supplyAmount, 0n
+          (sum, allocation) => sum + calcSellToPool(allocation.pool, allocation.demand).supplyAmount, 0n
         );
 
         if (currentTotalReceived - newTotalReceived < poolByteCost) {
@@ -368,8 +368,8 @@ export function computeOptimalSell(
     }
   }
 
-  return allocations.map(a => {
-    const { supplyAmount, feeAmount } = calcSellToPool(a.pool, a.demand);
-    return { pool: a.pool, demandAmount: a.demand, supplyAmount, feeAmount };
+  return allocations.map(allocation => {
+    const { supplyAmount, feeAmount } = calcSellToPool(allocation.pool, allocation.demand);
+    return { pool: allocation.pool, demandAmount: allocation.demand, supplyAmount, feeAmount };
   });
 }

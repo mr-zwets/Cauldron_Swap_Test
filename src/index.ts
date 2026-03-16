@@ -35,28 +35,28 @@ function buildCauldronInputsOutputs(
   const cauldronOutputs: Recipient[] = [];
   let totalUserReceive = 0n;
 
-  for (const alloc of allocations) {
-    const pool = alloc.pool
+  for (const allocation of allocations) {
+    const pool = allocation.pool
     const cauldronUtxo = convertPoolToUtxo(pool)
     const cauldronArtifact = cauldronArtifactWithPkh(pool.owner_pkh)
     const cauldronContract = new Contract(cauldronArtifact, [], options)
 
     // calculate new pool state after trade
-    const K = BigInt(pool.tokens) * BigInt(pool.sats)
+    const poolConstantK = BigInt(pool.tokens) * BigInt(pool.sats)
     let newTokens:bigint
     let tradeValue:bigint
     if(direction === 'buy'){
-      newTokens = BigInt(pool.tokens) - alloc.demandAmount
-      tradeValue = ceilDiv(K, newTokens) - BigInt(pool.sats)
+      newTokens = BigInt(pool.tokens) - allocation.demandAmount
+      tradeValue = ceilDiv(poolConstantK, newTokens) - BigInt(pool.sats)
     } else {
-      newTokens = BigInt(pool.tokens) + alloc.demandAmount
-      tradeValue = BigInt(pool.sats) - ceilDiv(K, newTokens)
+      newTokens = BigInt(pool.tokens) + allocation.demandAmount
+      tradeValue = BigInt(pool.sats) - ceilDiv(poolConstantK, newTokens)
     }
     // apply 0.3% swap fee
-    const newSatsExclFee = ceilDiv(K, newTokens)
+    const newSatsExclFee = ceilDiv(poolConstantK, newTokens)
     const feeAmount = tradeValue * 3n / 1000n
     const newSats = newSatsExclFee + feeAmount
-    const newTokensOutput = ceilDiv(K, newSatsExclFee)
+    const newTokensOutput = ceilDiv(poolConstantK, newSatsExclFee)
 
     if (direction === 'sell') {
       totalUserReceive += tradeValue - feeAmount
@@ -97,7 +97,7 @@ export async function prepareBuyTokens(
   const userBchUtxos = userUtxos.filter(utxo => !utxo.token)
 
   // calculate required bch input amount
-  const totalSupply = allocations.reduce((sum, a) => sum + a.supplyAmount, 0n)
+  const totalSupply = allocations.reduce((sum, allocation) => sum + allocation.supplyAmount, 0n)
   const tokenOutputDust = 1000n
   const baseFee = 2000n + 600n * BigInt(allocations.length - 1)
   const requiredBchAmount = totalSupply + tokenOutputDust + baseFee
@@ -125,15 +125,15 @@ export async function prepareBuyTokens(
 
   // build transaction — cauldron inputs/outputs first (OP_INPUTINDEX constraint)
   const transactionBuilder = new TransactionBuilder({ provider, maximumFeeSatsPerByte: 5 })
-  for (const ci of cauldronInputs) {
-    transactionBuilder.addInput(ci.utxo, ci.contract.unlock.swap())
+  for (const cauldronInput of cauldronInputs) {
+    transactionBuilder.addInput(cauldronInput.utxo, cauldronInput.contract.unlock.swap())
   }
   transactionBuilder.addInputs(bchInputUtxos, userTemplate.unlockP2PKH())
     .addOutputs([...cauldronOutputs, boughtTokensOutput, userChangeOutput])
 
   // all input utxos for external fee calculation
-  const inputUtxos = [...cauldronInputs.map(ci => ci.utxo), ...bchInputUtxos]
-  const totalFees = allocations.reduce((sum, a) => sum + a.feeAmount, 0n)
+  const inputUtxos = [...cauldronInputs.map(cauldronInput => cauldronInput.utxo), ...bchInputUtxos]
+  const totalFees = allocations.reduce((sum, allocation) => sum + allocation.feeAmount, 0n)
   return { transactionBuilder, inputUtxos, totalSatsCost: totalSupply, totalFees, effectivePricePerToken: totalSupply / amountToBuy }
 }
 
@@ -202,16 +202,16 @@ export async function prepareSellTokens(
   if(tokenChangeAmount > 0n) outputs.push(tokenChangeOutput)
 
   const transactionBuilder = new TransactionBuilder({ provider, maximumFeeSatsPerByte: 5 })
-  for (const ci of cauldronInputs) {
-    transactionBuilder.addInput(ci.utxo, ci.contract.unlock.swap())
+  for (const cauldronInput of cauldronInputs) {
+    transactionBuilder.addInput(cauldronInput.utxo, cauldronInput.contract.unlock.swap())
   }
   transactionBuilder.addInputs(userTokenInputs, userTemplate.unlockP2PKH())
     .addInput(userBchFeeInput, userTemplate.unlockP2PKH())
     .addOutputs(outputs)
 
   // all input utxos for external fee calculation
-  const inputUtxos = [...cauldronInputs.map(ci => ci.utxo), ...userTokenInputs, userBchFeeInput]
-  const totalFees = allocations.reduce((sum, a) => sum + a.feeAmount, 0n)
+  const inputUtxos = [...cauldronInputs.map(cauldronInput => cauldronInput.utxo), ...userTokenInputs, userBchFeeInput]
+  const totalFees = allocations.reduce((sum, allocation) => sum + allocation.feeAmount, 0n)
   return { transactionBuilder, inputUtxos, totalSatsReceived: totalUserReceive, totalFees, effectivePricePerToken: totalUserReceive / amountToSell }
 }
 
