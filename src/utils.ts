@@ -25,6 +25,40 @@ export function validateTokenAddress(address:string):void {
   }
 }
 
+/* UTXO Selection */
+
+export function gatherBchUtxos(userBchUtxos: Utxo[], requiredAmountSats: bigint){
+  // Sort in descending order (highest to lowest)
+  userBchUtxos.sort((utxo1, utxo2) => Number(utxo2.satoshis) - Number(utxo1.satoshis))
+
+  const bchInputUtxos:Utxo[] = []
+  const feePerUserInput = 180n
+  let userBchInputTotal = 0n
+  for(const userBchUtxo of userBchUtxos){
+    if(userBchInputTotal >= requiredAmountSats) break
+    bchInputUtxos.push(userBchUtxo)
+    userBchInputTotal += userBchUtxo.satoshis
+    requiredAmountSats += feePerUserInput
+  }
+  if(userBchInputTotal < requiredAmountSats) throw new Error("Insufficient BCH to cover the required amount")
+  return { userBchInputTotal, bchInputUtxos }
+}
+
+export function gatherTokenUtxos(userTokenUtxos: Utxo[], requiredAmountTokens: bigint){
+  // Sort in descending order (highest to lowest)
+  userTokenUtxos.sort((utxo1, utxo2) => Number(utxo2!.token!.amount) - Number(utxo1!.token!.amount))
+
+  const userTokenInputs:Utxo[] = []
+  let userTokenInputTotal = 0n
+  for(const utxo of userTokenUtxos){
+    if(userTokenInputTotal >= requiredAmountTokens) break
+    userTokenInputTotal += utxo!.token!.amount
+    userTokenInputs.push(utxo)
+  }
+  if(userTokenInputTotal < requiredAmountTokens) throw new Error("Insufficient tokens to cover the required amount")
+  return { userTokenInputTotal, userTokenInputs }
+}
+
 export function convertPoolToUtxo(pool: CauldronActivePool):Utxo{
   return {
     txid: pool.txid,
