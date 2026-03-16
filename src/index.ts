@@ -10,6 +10,7 @@ import {
 import { binToHex, hash160 } from '@bitauth/libauth'
 import type { CauldronActivePool, CauldronGetActivePools } from './interfaces.js';
 import { cauldronArtifactWithPkh, convertPoolToUtxo, gatherBchUtxos, gatherTokenUtxos, validateTokenAddress } from './utils.js';
+import { ceilDiv, computeOptimalBuy, computeOptimalSell } from './multipool.js';
 
 export type CauldronNetwork = 'mainnet' | 'chipnet';
 
@@ -25,16 +26,58 @@ export async function getCauldronPools(tokenId:string, network:CauldronNetwork =
   return data.active
 }
 
-export async function parsePoolPrices(pools:CauldronActivePool[]){
-  return pools.map(pool => {
-    const { tokens, sats } = pool;
-    const priceSatsPerToken = tokens / sats;
-    return { ...pool, price: priceSatsPerToken };
-  })
+function buildCauldronInputsOutputs(
+  allocations: { pool: CauldronActivePool; demandAmount: bigint }[],
+  direction: 'buy' | 'sell',
+  options: { provider: NetworkProvider; addressType: 'p2sh32' }
+) {
+  const cauldronInputs: { utxo: Utxo; contract: Contract }[] = [];
+  const cauldronOutputs: Recipient[] = [];
+  let totalUserReceive = 0n;
+
+  for (const alloc of allocations) {
+    const pool = alloc.pool
+    const cauldronUtxo = convertPoolToUtxo(pool)
+    const cauldronArtifact = cauldronArtifactWithPkh(pool.owner_pkh)
+    const cauldronContract = new Contract(cauldronArtifact, [], options)
+
+    // calculate new pool state after trade
+    const K = BigInt(pool.tokens) * BigInt(pool.sats)
+    let newTokens:bigint
+    let tradeValue:bigint
+    if(direction === 'buy'){
+      newTokens = BigInt(pool.tokens) - alloc.demandAmount
+      tradeValue = ceilDiv(K, newTokens) - BigInt(pool.sats)
+    } else {
+      newTokens = BigInt(pool.tokens) + alloc.demandAmount
+      tradeValue = BigInt(pool.sats) - ceilDiv(K, newTokens)
+    }
+    // apply 0.3% swap fee
+    const newSatsExclFee = ceilDiv(K, newTokens)
+    const feeAmount = tradeValue * 3n / 1000n
+    const newSats = newSatsExclFee + feeAmount
+    const newTokensOutput = ceilDiv(K, newSatsExclFee)
+
+    if (direction === 'sell') {
+      totalUserReceive += tradeValue - feeAmount
+    }
+
+    cauldronInputs.push({ utxo: cauldronUtxo, contract: cauldronContract })
+    cauldronOutputs.push({
+      to: cauldronContract.tokenAddress,
+      amount: newSats,
+      token: {
+        category: pool.token_id,
+        amount: newTokensOutput,
+      },
+    });
+  }
+
+  return { cauldronInputs, cauldronOutputs, totalUserReceive };
 }
 
 export async function prepareBuyTokens(
-  pool:CauldronActivePool,
+  pools:CauldronActivePool[],
   amountToBuy:number,
   userTokenAddress:string,
   privateKeyWif:string,
@@ -42,54 +85,35 @@ export async function prepareBuyTokens(
 ){
   validateTokenAddress(userTokenAddress)
 
-  // convert pool object to UTXO format
-  const cauldronUtxo = convertPoolToUtxo(pool);
+  const allocations = computeOptimalBuy(pools, BigInt(amountToBuy), 2n);
+  const options = { provider, addressType:'p2sh32' as const };
+
+  const { cauldronInputs, cauldronOutputs } = buildCauldronInputsOutputs(allocations, 'buy', options)
 
   // fetch user UTXOs
   const userUtxos = await provider.getUtxos(userTokenAddress);
   const userBchUtxos = userUtxos.filter(utxo => !utxo.token)
 
-  // Get the specific cauldron contract for the selected pool (based on owner pkh)
-  const cauldronArtifact = cauldronArtifactWithPkh(pool.owner_pkh)
-  const options = { provider, addressType:'p2sh32' as const };
-  const cauldronContract = new Contract(cauldronArtifact, [], options);
-
-  // calculate tradeValue and poolFee
-  const poolConstant = pool.tokens * pool.sats
-  const cauldronNewAmountSatsExcludingFee = Math.ceil(poolConstant / (pool.tokens - amountToBuy))
-  const tradeValue = Math.abs(cauldronNewAmountSatsExcludingFee - pool.sats)
-  const poolFee = Math.floor(tradeValue / 1000 * 3)
-
   // calculate required bch input amount
-  const tradeAmount = BigInt(tradeValue + poolFee)
+  const totalSupply = allocations.reduce((sum, a) => sum + a.supplyAmount, 0n)
   const tokenOutputDust = 1000n
-  const requiredFee = 2000n
-  const requiredBchAmount = tradeAmount + tokenOutputDust + requiredFee
+  const baseFee = 2000n + 600n * BigInt(allocations.length - 1)
+  const requiredBchAmount = totalSupply + tokenOutputDust + baseFee
 
   const { userBchInputTotal, bchInputUtxos } = gatherBchUtxos(userBchUtxos, requiredBchAmount)
 
-  const newCauldronAmountSats = cauldronNewAmountSatsExcludingFee + poolFee
-  const newCauldronAmountTokens = Math.ceil(poolConstant / cauldronNewAmountSatsExcludingFee)
-
-  const cauldronOutput:Recipient = {
-    to: cauldronContract.tokenAddress,
-    amount: BigInt(newCauldronAmountSats),
-    token: {
-      category: pool.token_id,
-      amount: BigInt(newCauldronAmountTokens)
-    }
-  }
+  const tokenId = allocations[0].pool.token_id
+  const changeAmount = userBchInputTotal - requiredBchAmount
 
   const boughtTokensOutput:Recipient = {
     to: userTokenAddress,
     amount: tokenOutputDust,
     token: {
-      category: pool.token_id,
+      category: tokenId,
       amount: BigInt(amountToBuy)
     }
   }
 
-  const changeAmount = userBchInputTotal - requiredBchAmount
   const userChangeOutput:Recipient = {
     to: userTokenAddress,
     amount: changeAmount
@@ -97,18 +121,22 @@ export async function prepareBuyTokens(
 
   const userTemplate = new SignatureTemplate(privateKeyWif)
 
+  // build transaction — cauldron inputs/outputs first (OP_INPUTINDEX constraint)
   const transactionBuilder = new TransactionBuilder({ provider, maximumFeeSatsPerByte: 5 })
-    .addInput(cauldronUtxo, cauldronContract.unlock.swap())
-    .addInputs(bchInputUtxos, userTemplate.unlockP2PKH())
-    .addOutputs([cauldronOutput, boughtTokensOutput, userChangeOutput])
+  for (const ci of cauldronInputs) {
+    transactionBuilder.addInput(ci.utxo, ci.contract.unlock.swap())
+  }
+  transactionBuilder.addInputs(bchInputUtxos, userTemplate.unlockP2PKH())
+    .addOutputs([...cauldronOutputs, boughtTokensOutput, userChangeOutput])
 
   // all input utxos for external fee calculation
-  const inputUtxos = [cauldronUtxo, ...bchInputUtxos]
-  return { transactionBuilder, inputUtxos }
+  const inputUtxos = [...cauldronInputs.map(ci => ci.utxo), ...bchInputUtxos]
+  const totalFees = allocations.reduce((sum, a) => sum + a.feeAmount, 0n)
+  return { transactionBuilder, inputUtxos, totalSatsCost: totalSupply, totalFees, effectivePricePerToken: totalSupply / BigInt(amountToBuy) }
 }
 
 export async function prepareSellTokens(
-  pool:CauldronActivePool,
+  pools:CauldronActivePool[],
   amountToSell:number,
   userTokenAddress:string,
   privateKeyWif:string,
@@ -116,32 +144,24 @@ export async function prepareSellTokens(
 ){
   validateTokenAddress(userTokenAddress)
 
-  // convert pool object to UTXO format
-  const cauldronUtxo = convertPoolToUtxo(pool);
+  const allocations = computeOptimalSell(pools, BigInt(amountToSell), 2n);
+  const tokenId = allocations[0].pool.token_id;
+  const options = { provider, addressType:'p2sh32' as const };
+
+  const { cauldronInputs, cauldronOutputs, totalUserReceive } = buildCauldronInputsOutputs(allocations, 'sell', options)
 
   // fetch user UTXOs
   const userUtxos = await provider.getUtxos(userTokenAddress);
-  const userTokenUtxos = userUtxos.filter(utxo => utxo.token?.category === pool.token_id)
+  const userTokenUtxos = userUtxos.filter(utxo => utxo.token?.category === tokenId)
   const userBchUtxos = userUtxos.filter(utxo => !utxo.token)
-
-  // Get the specific cauldron contract for the selected pool (based on owner pkh)
-  const cauldronArtifact = cauldronArtifactWithPkh(pool.owner_pkh)
-  const options = { provider, addressType:'p2sh32' as const };
-  const cauldronContract = new Contract(cauldronArtifact, [], options);
-
-  // calculate tradeValue and poolFee
-  const poolConstant = pool.tokens * pool.sats
-  const cauldronNewAmountSatsExcludingFee = Math.ceil(poolConstant / (pool.tokens + amountToSell))
-  const tradeValue = Math.abs(pool.sats - cauldronNewAmountSatsExcludingFee)
-  const poolFee = Math.floor(tradeValue / 1000 * 3)
 
   // select token inputs
   const { userTokenInputTotal, userTokenInputs } = gatherTokenUtxos(userTokenUtxos, BigInt(amountToSell))
 
   // calculate transaction fee
   const tokenChangeAmount = userTokenInputTotal - BigInt(amountToSell)
-  let requiredFee = 2000n
   const feePerUserInput = 180n
+  let requiredFee = 2000n + 600n * BigInt(allocations.length - 1)
   requiredFee += feePerUserInput * BigInt(userTokenInputs.length)
 
   // calculate required bch input amount
@@ -153,53 +173,42 @@ export async function prepareSellTokens(
     throw new Error(`missing userBchFeeInput with atleast requiredFee amount (${requiredBchAmount} sats)`)
   }
 
-  const newCauldronAmountSats = cauldronNewAmountSatsExcludingFee + poolFee
-  const newCauldronAmountTokens = Math.ceil(poolConstant / cauldronNewAmountSatsExcludingFee)
-
-  const cauldronOutput:Recipient = {
-    to: cauldronContract.tokenAddress,
-    amount: BigInt(newCauldronAmountSats),
-    token: {
-      category: pool.token_id,
-      amount: BigInt(newCauldronAmountTokens)
-    }
-  }
-
   // calculate change output
   const bchOnTokenInputs = userTokenInputs.reduce((sum, utxo) => sum + utxo.satoshis, 0n)
-  const userReceiveSats = BigInt(tradeValue - poolFee)
   const changeAmount = userBchFeeInput.satoshis - requiredFee - tokenChangeDust + bchOnTokenInputs
 
   const userBchOutput:Recipient = {
     to: userTokenAddress,
-    amount: userReceiveSats + changeAmount
+    amount: totalUserReceive + changeAmount
   }
 
-  const outputs:Recipient[] = [cauldronOutput, userBchOutput]
-
-  // token change output if user had more tokens than sold
-  if(tokenChangeAmount > 0n){
-    outputs.push({
-      to: userTokenAddress,
-      amount: tokenChangeDust,
-      token: {
-        category: pool.token_id,
-        amount: tokenChangeAmount
-      }
-    })
+  const tokenChangeOutput:Recipient = {
+    to: userTokenAddress,
+    amount: tokenChangeDust,
+    token: {
+      category: tokenId,
+      amount: tokenChangeAmount
+    }
   }
 
   const userTemplate = new SignatureTemplate(privateKeyWif)
 
+  // build transaction — cauldron inputs/outputs first (OP_INPUTINDEX constraint)
+  const outputs:Recipient[] = [...cauldronOutputs, userBchOutput]
+  if(tokenChangeAmount > 0n) outputs.push(tokenChangeOutput)
+
   const transactionBuilder = new TransactionBuilder({ provider, maximumFeeSatsPerByte: 5 })
-    .addInput(cauldronUtxo, cauldronContract.unlock.swap())
-    .addInputs(userTokenInputs, userTemplate.unlockP2PKH())
+  for (const ci of cauldronInputs) {
+    transactionBuilder.addInput(ci.utxo, ci.contract.unlock.swap())
+  }
+  transactionBuilder.addInputs(userTokenInputs, userTemplate.unlockP2PKH())
     .addInput(userBchFeeInput, userTemplate.unlockP2PKH())
     .addOutputs(outputs)
 
   // all input utxos for external fee calculation
-  const inputUtxos = [cauldronUtxo, ...userTokenInputs, userBchFeeInput]
-  return { transactionBuilder, inputUtxos }
+  const inputUtxos = [...cauldronInputs.map(ci => ci.utxo), ...userTokenInputs, userBchFeeInput]
+  const totalFees = allocations.reduce((sum, a) => sum + a.feeAmount, 0n)
+  return { transactionBuilder, inputUtxos, totalSatsReceived: totalUserReceive, totalFees, effectivePricePerToken: totalUserReceive / BigInt(amountToSell) }
 }
 
 export async function prepareWithdrawAll(
