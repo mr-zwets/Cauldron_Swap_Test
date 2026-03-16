@@ -112,6 +112,115 @@ export async function buyTokensPool(
   return txDetails
 }
 
+export async function sellTokensPool(
+  pool:CauldronActivePool,
+  amountToSell:number,
+  userTokenAddress:string,
+  privateKeyWif:string,
+  provider:NetworkProvider = new ElectrumNetworkProvider('mainnet')
+){
+  // convert pool object to UTXO format
+  const cauldronUtxo = convertPoolToUtxo(pool);
+
+  // fetch user UTXOs
+  const userUtxos = await provider.getUtxos(userTokenAddress);
+  const userTokenUtxos = userUtxos.filter(utxo => utxo.token?.category === pool.token_id)
+  const userBchUtxos = userUtxos.filter(utxo => !utxo.token)
+  const userTokenBalance = userTokenUtxos.reduce((total, utxo) => total += utxo.token!.amount, 0n);
+
+  if(userTokenBalance < BigInt(amountToSell)) throw new Error('Insufficient tokens to sell')
+
+  // Get the specific cauldron contract for the selected pool (based on owner pkh)
+  const cauldronArtifact = cauldronArtifactWithPkh(pool.owner_pkh)
+  const options = { provider, addressType:'p2sh32' as const };
+  const cauldronContract = new Contract(cauldronArtifact, [], options);
+
+  // calculate tradeValue and poolFee
+  const poolConstant = pool.tokens * pool.sats
+  const cauldronNewAmountSatsExcludingFee = Math.ceil(poolConstant / (pool.tokens + amountToSell))
+  const tradeValue = Math.abs(pool.sats - cauldronNewAmountSatsExcludingFee)
+  const poolFee = Math.floor(tradeValue / 1000 * 3)
+
+  // select token inputs
+  let userTokensInInputs = 0n
+  let tokenInputs:Utxo[] = []
+  let satsFromTokenInputs = 0n
+  for(const utxo of userTokenUtxos){
+    userTokensInInputs += utxo.token!.amount
+    satsFromTokenInputs += utxo.satoshis
+    tokenInputs.push(utxo)
+    if(userTokensInInputs >= BigInt(amountToSell)) break
+  }
+
+  // select BCH inputs for miner fee
+  const minerFee = 500n + 200n * BigInt(tokenInputs.length)
+  const bchNeededForFee = minerFee + 1000n // buffer for dust outputs
+  let userSatsInBchInputs = 0n
+  let bchInputs:Utxo[] = []
+  for(const utxo of userBchUtxos){
+    userSatsInBchInputs += utxo.satoshis
+    bchInputs.push(utxo)
+    if(userSatsInBchInputs >= bchNeededForFee) break
+  }
+  if(userSatsInBchInputs < bchNeededForFee) throw new Error('Insufficient funds for miner fee')
+
+  const newCauldronAmountSats = cauldronNewAmountSatsExcludingFee + poolFee
+  const newCauldronAmountTokens = Math.ceil(poolConstant / cauldronNewAmountSatsExcludingFee)
+
+  const tokenChange = userTokensInInputs - BigInt(amountToSell)
+  const totalMinerFee = minerFee + 200n * BigInt(bchInputs.length)
+  const tokenChangeDust = tokenChange > 0n ? 1000n : 0n
+
+  const cauldronOutput:Recipient = {
+    to: cauldronContract.tokenAddress,
+    amount: BigInt(newCauldronAmountSats),
+    token: {
+      category: pool.token_id,
+      amount: BigInt(newCauldronAmountTokens)
+    }
+  }
+
+  // user receives BCH from selling tokens
+  const userReceiveSats = BigInt(tradeValue - poolFee)
+  const userBchOutput:Recipient = {
+    to: userTokenAddress,
+    amount: userReceiveSats + satsFromTokenInputs - tokenChangeDust
+  }
+
+  const outputs:Recipient[] = [cauldronOutput, userBchOutput]
+
+  // token change output if user had more tokens than sold
+  if(tokenChange > 0n){
+    outputs.push({
+      to: userTokenAddress,
+      amount: tokenChangeDust,
+      token: {
+        category: pool.token_id,
+        amount: tokenChange
+      }
+    })
+  }
+
+  // BCH change output
+  const bchChange = userSatsInBchInputs - totalMinerFee
+  if(bchChange > 546n){
+    outputs.push({
+      to: userTokenAddress,
+      amount: bchChange
+    })
+  }
+
+  const userTemplate = new SignatureTemplate(privateKeyWif)
+
+  const txDetails = await new TransactionBuilder({ provider })
+    .addInput(cauldronUtxo, cauldronContract.unlock.swap())
+    .addInputs(tokenInputs, userTemplate.unlockP2PKH())
+    .addInputs(bchInputs, userTemplate.unlockP2PKH())
+    .addOutputs(outputs)
+    .send()
+  return txDetails
+}
+
 export async function withdrawAllFromPool(
   pool:CauldronActivePool,
   userTokenAddress:string,

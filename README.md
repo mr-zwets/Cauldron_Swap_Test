@@ -99,6 +99,5 @@ pnpm run test
 
 ## Future Extensions
 
-- add a `sellTokensPool` function
 - allow for aggregating across multiple pools
 - allow to find the the contracts on-chain with op_returns instead of through a trusted API
