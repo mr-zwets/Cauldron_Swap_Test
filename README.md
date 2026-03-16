@@ -1,12 +1,12 @@
-# Cauldron Swap Test
+# Cauldron Swap SDK
 
-Cauldron Swap Test using the CashScript SDK
-
-Relies on the Cauldron indexer and public API to find the Cauldron contracts.
+TypeScript SDK for trading on the [Cauldron DEX](https://cauldron.quest) on Bitcoin Cash, built with the CashScript SDK.
 
 ## Overview
 
 `prepareBuyTokens` and `prepareSellTokens` accept an array of pools and optimally split the trade across them using binary search on the marginal rate of the constant product curve, so each pool ends up at the same marginal cost — minimizing total price impact. Pools that don't save enough to justify their extra transaction bytes are automatically dropped. See [multi-pool.md](multi-pool.md) for details on the algorithm.
+
+**Note:** Pools are fetched from the Cauldron indexer API, which is a trusted third party. All token amounts are in base units (raw on-chain amounts, `bigint`) — BCMR decimal places are not supported.
 
 ## Buy Tokens
 

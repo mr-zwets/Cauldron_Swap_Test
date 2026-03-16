@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 TypeScript SDK for interacting with Cauldron liquidity pools on Bitcoin Cash (BCH). Uses CashScript SDK to build and sign swap/withdrawal transactions, and the Cauldron indexer API to discover pools.
 
-**Status**: Early development (v0.1.0) with limited test coverage.
+**Status**: Early development, not yet published on npm.
 
 ## Commands
 
