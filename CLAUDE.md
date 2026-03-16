@@ -35,7 +35,7 @@ CashScript doesn't support multi-function contracts with proper function indexin
 
 ### Multi-pool optimal trading
 
-`prepareBuyTokens` and `prepareSellTokens` accept `CauldronActivePool | CauldronActivePool[]`. When given an array with multiple pools, the trade is optimally split across pools using binary search on the marginal rate (constant product AMM math). The algorithm:
+`prepareBuyTokens` and `prepareSellTokens` accept `CauldronActivePool[]` and a `bigint` amount. The trade is optimally split across pools using binary search on the marginal rate (constant product AMM math). The algorithm:
 
 1. Binary searches for the rate at which combined demand across all pools equals the target amount
 2. Uses a stepper to adjust rounding so the sum of allocations exactly matches the requested amount

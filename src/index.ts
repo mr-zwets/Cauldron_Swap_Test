@@ -78,14 +78,16 @@ function buildCauldronInputsOutputs(
 
 export async function prepareBuyTokens(
   pools:CauldronActivePool[],
-  amountToBuy:number,
+  amountToBuy:bigint,
   userTokenAddress:string,
   privateKeyWif:string,
   provider:NetworkProvider = new ElectrumNetworkProvider('mainnet')
 ){
   validateTokenAddress(userTokenAddress)
+  if(amountToBuy <= 0n) throw new Error('amountToBuy must be a positive number')
+  if(!pools.every(p => p.token_id === pools[0].token_id)) throw new Error('All pools must share the same token_id')
 
-  const allocations = computeOptimalBuy(pools, BigInt(amountToBuy), 2n);
+  const allocations = computeOptimalBuy(pools, amountToBuy, 2n);
   const options = { provider, addressType:'p2sh32' as const };
 
   const { cauldronInputs, cauldronOutputs } = buildCauldronInputsOutputs(allocations, 'buy', options)
@@ -110,7 +112,7 @@ export async function prepareBuyTokens(
     amount: tokenOutputDust,
     token: {
       category: tokenId,
-      amount: BigInt(amountToBuy)
+      amount: amountToBuy
     }
   }
 
@@ -132,19 +134,21 @@ export async function prepareBuyTokens(
   // all input utxos for external fee calculation
   const inputUtxos = [...cauldronInputs.map(ci => ci.utxo), ...bchInputUtxos]
   const totalFees = allocations.reduce((sum, a) => sum + a.feeAmount, 0n)
-  return { transactionBuilder, inputUtxos, totalSatsCost: totalSupply, totalFees, effectivePricePerToken: totalSupply / BigInt(amountToBuy) }
+  return { transactionBuilder, inputUtxos, totalSatsCost: totalSupply, totalFees, effectivePricePerToken: totalSupply / amountToBuy }
 }
 
 export async function prepareSellTokens(
   pools:CauldronActivePool[],
-  amountToSell:number,
+  amountToSell:bigint,
   userTokenAddress:string,
   privateKeyWif:string,
   provider:NetworkProvider = new ElectrumNetworkProvider('mainnet')
 ){
   validateTokenAddress(userTokenAddress)
+  if(amountToSell <= 0n) throw new Error('amountToSell must be a positive number')
+  if(!pools.every(p => p.token_id === pools[0].token_id)) throw new Error('All pools must share the same token_id')
 
-  const allocations = computeOptimalSell(pools, BigInt(amountToSell), 2n);
+  const allocations = computeOptimalSell(pools, amountToSell, 2n);
   const tokenId = allocations[0].pool.token_id;
   const options = { provider, addressType:'p2sh32' as const };
 
@@ -156,10 +160,10 @@ export async function prepareSellTokens(
   const userBchUtxos = userUtxos.filter(utxo => !utxo.token)
 
   // select token inputs
-  const { userTokenInputTotal, userTokenInputs } = gatherTokenUtxos(userTokenUtxos, BigInt(amountToSell))
+  const { userTokenInputTotal, userTokenInputs } = gatherTokenUtxos(userTokenUtxos, amountToSell)
 
   // calculate transaction fee
-  const tokenChangeAmount = userTokenInputTotal - BigInt(amountToSell)
+  const tokenChangeAmount = userTokenInputTotal - amountToSell
   const feePerUserInput = 180n
   let requiredFee = 2000n + 600n * BigInt(allocations.length - 1)
   requiredFee += feePerUserInput * BigInt(userTokenInputs.length)
@@ -208,7 +212,7 @@ export async function prepareSellTokens(
   // all input utxos for external fee calculation
   const inputUtxos = [...cauldronInputs.map(ci => ci.utxo), ...userTokenInputs, userBchFeeInput]
   const totalFees = allocations.reduce((sum, a) => sum + a.feeAmount, 0n)
-  return { transactionBuilder, inputUtxos, totalSatsReceived: totalUserReceive, totalFees, effectivePricePerToken: totalUserReceive / BigInt(amountToSell) }
+  return { transactionBuilder, inputUtxos, totalSatsReceived: totalUserReceive, totalFees, effectivePricePerToken: totalUserReceive / amountToSell }
 }
 
 export async function prepareWithdrawAll(

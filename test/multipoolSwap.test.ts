@@ -67,7 +67,7 @@ describe('multi-pool buy', () => {
     const provider = setupMultiPoolProvider(pools, userInputs);
 
     const { transactionBuilder, inputUtxos } = await prepareBuyTokens(
-      pools, 1000, testUserTokenAddress, testUserWif, provider
+      pools, 1000n, testUserTokenAddress, testUserWif, provider
     );
 
     const txHex = transactionBuilder.build();
@@ -81,7 +81,7 @@ describe('multi-pool buy', () => {
     const provider = setupMultiPoolProvider(pools, userInputs);
 
     const { transactionBuilder, inputUtxos } = await prepareBuyTokens(
-      pools, 500, testUserTokenAddress, testUserWif, provider
+      pools, 500n, testUserTokenAddress, testUserWif, provider
     );
 
     const txHex = transactionBuilder.build();
@@ -95,7 +95,7 @@ describe('multi-pool buy', () => {
     const provider = setupMultiPoolProvider(pools, userInputs);
 
     const { transactionBuilder, inputUtxos } = await prepareBuyTokens(
-      pools, 100, testUserTokenAddress, testUserWif, provider
+      pools, 100n, testUserTokenAddress, testUserWif, provider
     );
 
     const txHex = transactionBuilder.build();
@@ -109,7 +109,7 @@ describe('multi-pool buy', () => {
     const provider = setupMultiPoolProvider(pools, userInputs);
 
     const promise = prepareBuyTokens(
-      pools, 1000, testUserTokenAddress, testUserWif, provider
+      pools, 1000n, testUserTokenAddress, testUserWif, provider
     );
     await expect(promise).rejects.toThrow(/Insufficient BCH/);
   });
@@ -125,7 +125,7 @@ describe('multi-pool sell', () => {
     const provider = setupMultiPoolProvider(pools, userInputs);
 
     const { transactionBuilder, inputUtxos } = await prepareSellTokens(
-      pools, 500, testUserTokenAddress, testUserWif, provider
+      pools, 500n, testUserTokenAddress, testUserWif, provider
     );
 
     const txHex = transactionBuilder.build();
@@ -142,7 +142,7 @@ describe('multi-pool sell', () => {
     const provider = setupMultiPoolProvider(pools, userInputs);
 
     const { transactionBuilder, inputUtxos } = await prepareSellTokens(
-      pools, 300, testUserTokenAddress, testUserWif, provider
+      pools, 300n, testUserTokenAddress, testUserWif, provider
     );
 
     const txHex = transactionBuilder.build();
@@ -159,7 +159,7 @@ describe('multi-pool sell', () => {
     const provider = setupMultiPoolProvider(pools, userInputs);
 
     const { transactionBuilder, inputUtxos } = await prepareSellTokens(
-      pools, 100, testUserTokenAddress, testUserWif, provider
+      pools, 100n, testUserTokenAddress, testUserWif, provider
     );
 
     const txHex = transactionBuilder.build();
@@ -175,7 +175,7 @@ describe('multi-pool sell', () => {
     const provider = setupMultiPoolProvider(pools, userInputs);
 
     const promise = prepareSellTokens(
-      pools, 500, testUserTokenAddress, testUserWif, provider
+      pools, 500n, testUserTokenAddress, testUserWif, provider
     );
     await expect(promise).rejects.toThrow(/missing userBchFeeInput/);
   });

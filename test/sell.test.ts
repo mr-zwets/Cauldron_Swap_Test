@@ -42,7 +42,7 @@ describe('prepareSellTokens', () => {
       randomUtxo({ satoshis: 100_000n }),
     ])
 
-    const promise = prepareSellTokens([testFuruPool], 100, testUserTokenAddress, testUserWif, provider)
+    const promise = prepareSellTokens([testFuruPool], 100n, testUserTokenAddress, testUserWif, provider)
     await expect(promise).rejects.toThrow(/Insufficient tokens/)
   })
 
@@ -51,7 +51,7 @@ describe('prepareSellTokens', () => {
       randomUtxo({ satoshis: 1000n, token: { category: testFuruPool.token_id, amount: 500n } }),
     ])
 
-    const promise = prepareSellTokens([testFuruPool], 100, testUserTokenAddress, testUserWif, provider)
+    const promise = prepareSellTokens([testFuruPool], 100n, testUserTokenAddress, testUserWif, provider)
     await expect(promise).rejects.toThrow(/missing userBchFeeInput/)
   })
 
@@ -63,7 +63,7 @@ describe('prepareSellTokens', () => {
     const provider = setupSellTx(userInputs)
 
     const { transactionBuilder, inputUtxos } = await prepareSellTokens(
-      [testFuruPool], 100, testUserTokenAddress, testUserWif, provider
+      [testFuruPool], 100n, testUserTokenAddress, testUserWif, provider
     )
     const txHex = transactionBuilder.build()
     const { txFeeRate } = calculateTransactionFee(txHex, inputUtxos)
@@ -81,7 +81,7 @@ describe('prepareSellTokens', () => {
     const provider = setupSellTx(userInputs)
 
     const { transactionBuilder, inputUtxos } = await prepareSellTokens(
-      [testFuruPool], 100, testUserTokenAddress, testUserWif, provider
+      [testFuruPool], 100n, testUserTokenAddress, testUserWif, provider
     )
     const txHex = transactionBuilder.build()
     const { txFeeRate } = calculateTransactionFee(txHex, inputUtxos)
@@ -96,7 +96,7 @@ describe('prepareSellTokens', () => {
     const provider = setupSellTx(userInputs)
 
     const { transactionBuilder, inputUtxos } = await prepareSellTokens(
-      [testFuruPool], 200, testUserTokenAddress, testUserWif, provider
+      [testFuruPool], 200n, testUserTokenAddress, testUserWif, provider
     )
     const txHex = transactionBuilder.build()
     const { txFeeRate } = calculateTransactionFee(txHex, inputUtxos)
@@ -111,7 +111,7 @@ describe('prepareSellTokens', () => {
     const provider = setupSellTx(userInputs)
 
     const { transactionBuilder, inputUtxos } = await prepareSellTokens(
-      [testFuruPool], 100, testUserTokenAddress, testUserWif, provider
+      [testFuruPool], 100n, testUserTokenAddress, testUserWif, provider
     )
     const txHex = transactionBuilder.build()
     const { txFeeRate } = calculateTransactionFee(txHex, inputUtxos)

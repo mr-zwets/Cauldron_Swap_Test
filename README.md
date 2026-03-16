@@ -15,7 +15,7 @@ import { getCauldronPools, prepareBuyTokens } from "./index"
 import { userTokenAddress, privateKeyWif } from "./somewhere"
 
 const furuTokenId = "d9ab24ed15a7846cc3d9e004aa5cb976860f13dac1ead05784ee4f4622af96ea"
-const amountToBuy = 100_000
+const amountToBuy = 100_000n
 
 const cauldronPools = await getCauldronPools(furuTokenId)
 
@@ -40,7 +40,7 @@ import { getCauldronPools, prepareSellTokens } from "./index"
 import { userTokenAddress, privateKeyWif } from "./somewhere"
 
 const furuTokenId = "d9ab24ed15a7846cc3d9e004aa5cb976860f13dac1ead05784ee4f4622af96ea"
-const amountToSell = 100_000
+const amountToSell = 100_000n
 
 const cauldronPools = await getCauldronPools(furuTokenId)
 
@@ -89,17 +89,15 @@ import { getCauldronPools, prepareBuyTokens } from "./index"
 import { userTokenAddress, privateKeyWif } from "./somewhere"
 
 const chipnetTokenId = "53636bc8c1afbe35a7ba169eadfac0aebadeacf96954a9a066a483e885580ed4"
-const amountToBuy = 100
+const amountToBuy = 100n
 
 // fetch pools from chipnet indexer
 const cauldronPools = await getCauldronPools(chipnetTokenId, 'chipnet')
 
-const poolToUse = cauldronPools[0]
-
 // use a chipnet provider for the transaction
 const provider = new ElectrumNetworkProvider('chipnet')
 const { transactionBuilder } = await prepareBuyTokens(
-  poolToUse,
+  cauldronPools,
   amountToBuy,
   userTokenAddress,
   privateKeyWif,
