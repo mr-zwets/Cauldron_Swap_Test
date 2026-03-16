@@ -1,4 +1,5 @@
 import type { Artifact, Utxo } from 'cashscript';
+import { decodeCashAddress } from '@bitauth/libauth';
 import cauldronSwapArtifact from './artifact/swap_artifact.json' with { type: 'json' };
 import cauldronManagePoolArtifact from './artifact/managepool_artifact.json' with { type: 'json' };
 import { type CauldronActivePool } from './interfaces.js';
@@ -13,6 +14,15 @@ export function cauldronArtifactWithPkh(pkhHex:string, swapArtifact:boolean=true
   // different contracts should have unique names
   constructedArtifact.contractName = swapArtifact ? `CauldronSwap ${pkhHex}` : `CauldronManagePool ${pkhHex}`;
   return constructedArtifact
+}
+
+export function validateTokenAddress(address:string):void {
+  const decoded = decodeCashAddress(address)
+  if(typeof decoded === 'string') throw new Error(`Invalid CashAddress: ${decoded}`)
+  const tokenTypes = ['p2pkhWithTokens', 'p2shWithTokens']
+  if(!tokenTypes.includes(decoded.type)){
+    throw new Error('Address is not a token-aware address')
+  }
 }
 
 export function convertPoolToUtxo(pool: CauldronActivePool):Utxo{

@@ -9,7 +9,7 @@ import {
 } from 'cashscript';
 import { binToHex, hash160 } from '@bitauth/libauth'
 import type { CauldronActivePool, CauldronGetActivePools } from './interfaces.js';
-import { cauldronArtifactWithPkh, convertPoolToUtxo } from './utils.js';
+import { cauldronArtifactWithPkh, convertPoolToUtxo, validateTokenAddress } from './utils.js';
 
 export type CauldronNetwork = 'mainnet' | 'chipnet';
 
@@ -40,10 +40,10 @@ export async function buyTokensPool(
   privateKeyWif:string,
   provider:NetworkProvider = new ElectrumNetworkProvider('mainnet')
 ){
+  validateTokenAddress(userTokenAddress)
+
   // convert pool object to UTXO format
   const cauldronUtxo = convertPoolToUtxo(pool);
-
-  // Does not explicitly validate user address to be a token address, but will fail later if not
 
   // fetch user UTXOs
   const userUtxos = await provider.getUtxos(userTokenAddress);
@@ -119,6 +119,8 @@ export async function sellTokensPool(
   privateKeyWif:string,
   provider:NetworkProvider = new ElectrumNetworkProvider('mainnet')
 ){
+  validateTokenAddress(userTokenAddress)
+
   // convert pool object to UTXO format
   const cauldronUtxo = convertPoolToUtxo(pool);
 
@@ -227,10 +229,10 @@ export async function withdrawAllFromPool(
   privateKeyWif:string,
   provider:NetworkProvider = new ElectrumNetworkProvider('mainnet')
 ){
+  validateTokenAddress(userTokenAddress)
+
   // convert pool object to UTXO format
   const cauldronUtxo = convertPoolToUtxo(pool);
-
-  // Does not explicitly validate user address to be a token address, but will fail later if not
 
   const ownerTemplate = new SignatureTemplate(privateKeyWif)
   const ownerPk = ownerTemplate.getPublicKey()
