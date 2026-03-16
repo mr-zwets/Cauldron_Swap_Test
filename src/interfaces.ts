@@ -11,3 +11,10 @@ export interface CauldronActivePool {
   tx_pos: number;
   txid: string;
 }
+
+export interface PoolAllocation {
+  pool: CauldronActivePool;
+  demandAmount: bigint;
+  supplyAmount: bigint;
+  feeAmount: bigint;
+}

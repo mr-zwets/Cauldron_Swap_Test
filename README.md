@@ -1,10 +1,12 @@
-# Cauldron Swap Test
+# Cauldron Swap SDK
 
-Cauldron Swap Test using the CashScript SDK
+TypeScript SDK for trading on the [Cauldron DEX](https://cauldron.quest) on Bitcoin Cash, built with the CashScript SDK.
 
-Relies on the Cauldron indexer and public API to find the Cauldron contracts.
+## Overview
 
-**NOTE**: the code is still in development with very limited tests so proceed with great caution!
+`prepareBuyTokens` and `prepareSellTokens` accept an array of pools and optimally split the trade across them using binary search on the marginal rate of the constant product curve, so each pool ends up at the same marginal cost — minimizing total price impact. Pools that don't save enough to justify their extra transaction bytes are automatically dropped. See [multi-pool.md](multi-pool.md) for details on the algorithm.
+
+**Note:** Pools are fetched from the Cauldron indexer API, which is a trusted third party. All token amounts are in base units (raw on-chain amounts, `bigint`) — BCMR decimal places are not supported.
 
 ## Buy Tokens
 
@@ -13,23 +15,21 @@ import { getCauldronPools, prepareBuyTokens } from "./index"
 import { userTokenAddress, privateKeyWif } from "./somewhere"
 
 const furuTokenId = "d9ab24ed15a7846cc3d9e004aa5cb976860f13dac1ead05784ee4f4622af96ea"
-const amountToBuy = 100
+const amountToBuy = 100_000n
 
-// fetch pools for tokenId
 const cauldronPools = await getCauldronPools(furuTokenId)
 
-// select a cauldron pool to trade with
-const poolToUse = cauldronPools[0]
-
-// prepare buy transaction
-const { transactionBuilder } = await prepareBuyTokens(
-  poolToUse,
+// pass all pools — the SDK optimally splits the trade across pools
+const { transactionBuilder, totalSatsCost, totalFees, effectivePricePerToken } = await prepareBuyTokens(
+  cauldronPools,
   amountToBuy,
   userTokenAddress,
   privateKeyWif
 )
 
-// broadcast the transaction
+// review the effective price before broadcasting
+console.log(`Cost: ${totalSatsCost} sats (${totalFees} fees), ${effectivePricePerToken} sats/token`)
+
 const txDetails = await transactionBuilder.send()
 ```
 
@@ -40,18 +40,20 @@ import { getCauldronPools, prepareSellTokens } from "./index"
 import { userTokenAddress, privateKeyWif } from "./somewhere"
 
 const furuTokenId = "d9ab24ed15a7846cc3d9e004aa5cb976860f13dac1ead05784ee4f4622af96ea"
-const amountToSell = 100
+const amountToSell = 100_000n
 
 const cauldronPools = await getCauldronPools(furuTokenId)
-const poolToUse = cauldronPools[0]
 
-// prepare sell transaction
-const { transactionBuilder } = await prepareSellTokens(
-  poolToUse,
+// pass all pools — the SDK optimally splits the trade across pools
+const { transactionBuilder, totalSatsReceived, totalFees, effectivePricePerToken } = await prepareSellTokens(
+  cauldronPools,
   amountToSell,
   userTokenAddress,
   privateKeyWif
 )
+
+// review the effective price before broadcasting
+console.log(`Receive: ${totalSatsReceived} sats (${totalFees} fees), ${effectivePricePerToken} sats/token`)
 
 const txDetails = await transactionBuilder.send()
 ```
@@ -87,17 +89,15 @@ import { getCauldronPools, prepareBuyTokens } from "./index"
 import { userTokenAddress, privateKeyWif } from "./somewhere"
 
 const chipnetTokenId = "53636bc8c1afbe35a7ba169eadfac0aebadeacf96954a9a066a483e885580ed4"
-const amountToBuy = 100
+const amountToBuy = 100n
 
 // fetch pools from chipnet indexer
 const cauldronPools = await getCauldronPools(chipnetTokenId, 'chipnet')
 
-const poolToUse = cauldronPools[0]
-
 // use a chipnet provider for the transaction
 const provider = new ElectrumNetworkProvider('chipnet')
 const { transactionBuilder } = await prepareBuyTokens(
-  poolToUse,
+  cauldronPools,
   amountToBuy,
   userTokenAddress,
   privateKeyWif,
@@ -129,5 +129,10 @@ pnpm run test
 
 ## Future Extensions
 
-- allow for aggregating across multiple pools for buy and sell
-- allow to find the the contracts on-chain with op_returns instead of through a trusted API
+### BCMR token metadata
+
+The trading logic currently operates on base token units (the raw on-chain amount). The BCMR standard allows tokens to define a ticker symbol and decimal places for a higher-level display unit, but this SDK does not yet support that abstraction. Token amounts passed to `prepareBuyTokens`/`prepareSellTokens` must be in base units (and hence are BigInt type).
+
+### On-chain pool discovery
+
+Currently pool discovery relies on the Cauldron indexer API, which is a trusted third party. Ideally pools could be discovered directly on-chain. The challenge is that Cauldron pools use P2SH, so the contract code is hidden behind a hash — you can't identify them by script fingerprinting alone. However, new pools can be discovered by their OP_RETURN marker `SUMMON` in the creation transaction. BCHN's [bytecode pattern RPC](https://gitlab.com/bitcoin-cash-node/bitcoin-cash-node/-/merge_requests/1958) (`redeemBytecodePattern` with fingerprint matching) could help identify existing pools when they are spent, since the redeem script is revealed at spend time.

@@ -41,7 +41,7 @@ describe('prepareBuyTokens', () => {
       randomUtxo({ satoshis: 1000n }),
     ])
 
-    const promise = prepareBuyTokens(testFuruPool, 100, testUserTokenAddress, testUserWif, provider)
+    const promise = prepareBuyTokens([testFuruPool], 100n, testUserTokenAddress, testUserWif, provider)
     await expect(promise).rejects.toThrow(/Insufficient BCH/)
   })
 
@@ -52,7 +52,7 @@ describe('prepareBuyTokens', () => {
     const provider = setupBuyTx(userInputs)
 
     const { transactionBuilder, inputUtxos } = await prepareBuyTokens(
-      testFuruPool, 100, testUserTokenAddress, testUserWif, provider
+      [testFuruPool], 100n, testUserTokenAddress, testUserWif, provider
     )
     const txHex = transactionBuilder.build()
     const { txFeeRate } = calculateTransactionFee(txHex, inputUtxos)
@@ -69,7 +69,7 @@ describe('prepareBuyTokens', () => {
     const provider = setupBuyTx(userInputs)
 
     const { transactionBuilder, inputUtxos } = await prepareBuyTokens(
-      testFuruPool, 100, testUserTokenAddress, testUserWif, provider
+      [testFuruPool], 100n, testUserTokenAddress, testUserWif, provider
     )
     const txHex = transactionBuilder.build()
     const { txFeeRate } = calculateTransactionFee(txHex, inputUtxos)

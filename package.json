@@ -1,5 +1,5 @@
 {
-  "name": "cauldron-swap-test",
+  "name": "cauldron-swap-sdk",
   "version": "0.1.0",
   "scripts": {
     "test": "vitest"
@@ -8,7 +8,7 @@
   "keywords": [],
   "author": "Mathieu Geukens",
   "license": "ISC",
-  "description": "Cauldron Swap Test using the CashScript SDK",
+  "description": "TypeScript SDK for trading on the Cauldron DEX on Bitcoin Cash, built with the CashScript SDK",
   "dependencies": {
     "@bitauth/libauth": "3.1.0-next.8",
     "cashscript": "^0.12.1"
