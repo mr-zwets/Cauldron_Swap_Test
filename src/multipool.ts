@@ -2,6 +2,10 @@ import type { CauldronActivePool, PoolAllocation } from './interfaces.js';
 
 const RATE_DENOMINATOR = 10n ** 13n;
 
+// Conservative max pools per transaction to stay within the 100KB consensus limit.
+// Each pool adds ~277 bytes (input + output), so 350 pools ≈ 97KB leaving room for user I/O.
+export const MAX_POOLS_PER_TRANSACTION = 350;
+
 export function isqrt(value: bigint): bigint {
   if (value < 0n) throw new Error('isqrt of negative number');
   if (value === 0n) return 0n;
@@ -275,7 +279,8 @@ function solveSellAllocations(
 export function computeOptimalBuy(
   pools: CauldronActivePool[],
   totalTokensToBuy: bigint,
-  txFeePerByte: bigint = 1n
+  txFeePerByte: bigint = 1n,
+  maxPools: number = MAX_POOLS_PER_TRANSACTION
 ): PoolAllocation[] {
   if (pools.length === 0) throw new Error('No pools provided');
 
@@ -317,6 +322,13 @@ export function computeOptimalBuy(
     }
   }
 
+  // Hard cap: limit pools to stay within tx size limits
+  if (allocations.length > maxPools) {
+    allocations.sort((a, b) => Number(b.demand - a.demand));
+    const cappedPools = allocations.slice(0, maxPools).map(allocation => allocation.pool);
+    allocations = solveBuyAllocations(cappedPools, totalTokensToBuy);
+  }
+
   return allocations.map(allocation => {
     const { supplyAmount, feeAmount } = calcBuyFromPool(allocation.pool, allocation.demand);
     return { pool: allocation.pool, demandAmount: allocation.demand, supplyAmount, feeAmount };
@@ -326,7 +338,8 @@ export function computeOptimalBuy(
 export function computeOptimalSell(
   pools: CauldronActivePool[],
   totalTokensToSell: bigint,
-  txFeePerByte: bigint = 1n
+  txFeePerByte: bigint = 1n,
+  maxPools: number = MAX_POOLS_PER_TRANSACTION
 ): PoolAllocation[] {
   if (pools.length === 0) throw new Error('No pools provided');
 
@@ -366,6 +379,13 @@ export function computeOptimalSell(
         // Can't fulfill without this pool, keep it
       }
     }
+  }
+
+  // Hard cap: limit pools to stay within tx size limits
+  if (allocations.length > maxPools) {
+    allocations.sort((a, b) => Number(b.demand - a.demand));
+    const cappedPools = allocations.slice(0, maxPools).map(allocation => allocation.pool);
+    allocations = solveSellAllocations(cappedPools, totalTokensToSell);
   }
 
   return allocations.map(allocation => {

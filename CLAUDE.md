@@ -40,6 +40,7 @@ CashScript doesn't support multi-function contracts with proper function indexin
 1. Binary searches for the rate at which combined demand across all pools equals the target amount
 2. Uses a stepper to adjust rounding so the sum of allocations exactly matches the requested amount
 3. Eliminates pools whose savings don't justify the extra ~197 bytes of tx overhead
+4. Applies a hard cap (`MAX_POOLS_PER_TRANSACTION = 350`) to guarantee the transaction stays within BCH's 100KB consensus limit. The cap keeps the largest allocations and re-solves. Both `computeOptimalBuy` and `computeOptimalSell` accept an optional `maxPools` parameter to override the default.
 
 Multi-pool transactions place cauldron inputs/outputs first in 1:1 order (required by the contract's `OP_INPUTINDEX` validation), followed by user inputs and outputs.
 

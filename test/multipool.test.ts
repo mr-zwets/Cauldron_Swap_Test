@@ -170,6 +170,26 @@ describe('computeOptimalBuy', () => {
   test('no pools: throws', () => {
     expect(() => computeOptimalBuy([], 100n)).toThrow(/No pools provided/);
   });
+
+  test('maxPools cap: limits pool count and re-solves correctly', () => {
+    const pool1 = makePool(100_000_000, 1_000_000, 'aaaa');
+    const pool2 = makePool(100_000_000, 1_000_000, 'bbbb');
+    const pool3 = makePool(100_000_000, 1_000_000, 'cccc');
+    const pool4 = makePool(100_000_000, 1_000_000, 'dddd');
+    const totalBuy = 10_000n;
+
+    // Without cap, all 4 pools should be used
+    const uncapped = computeOptimalBuy([pool1, pool2, pool3, pool4], totalBuy, 0n);
+    expect(uncapped.length).toBe(4);
+
+    // With maxPools=2, only 2 pools should be used
+    const capped = computeOptimalBuy([pool1, pool2, pool3, pool4], totalBuy, 0n, 2);
+    expect(capped.length).toBe(2);
+
+    // Total demand still matches requested amount
+    const totalDemand = capped.reduce((sum, allocation) => sum + allocation.demandAmount, 0n);
+    expect(totalDemand).toBe(totalBuy);
+  });
 });
 
 describe('computeOptimalSell', () => {
@@ -230,6 +250,26 @@ describe('computeOptimalSell', () => {
     const result = computeOptimalSell([pool1, pool2], totalSell);
 
     const totalDemand = result.reduce((sum, a) => sum + a.demandAmount, 0n);
+    expect(totalDemand).toBe(totalSell);
+  });
+
+  test('maxPools cap: limits pool count and re-solves correctly', () => {
+    const pool1 = makePool(100_000_000, 1_000_000, 'aaaa');
+    const pool2 = makePool(100_000_000, 1_000_000, 'bbbb');
+    const pool3 = makePool(100_000_000, 1_000_000, 'cccc');
+    const pool4 = makePool(100_000_000, 1_000_000, 'dddd');
+    const totalSell = 10_000n;
+
+    // Without cap, all 4 pools should be used
+    const uncapped = computeOptimalSell([pool1, pool2, pool3, pool4], totalSell, 0n);
+    expect(uncapped.length).toBe(4);
+
+    // With maxPools=2, only 2 pools should be used
+    const capped = computeOptimalSell([pool1, pool2, pool3, pool4], totalSell, 0n, 2);
+    expect(capped.length).toBe(2);
+
+    // Total demand still matches requested amount
+    const totalDemand = capped.reduce((sum, allocation) => sum + allocation.demandAmount, 0n);
     expect(totalDemand).toBe(totalSell);
   });
 

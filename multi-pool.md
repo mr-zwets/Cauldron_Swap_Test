@@ -13,13 +13,14 @@ The optimal split is found using **binary search on the marginal rate**. At the 
 1. **Binary search**: Find the target marginal rate where the combined demand across all pools equals the requested trade amount. Each pool's contribution at a given rate is derived from `new_tokens = isqrt(K * RATE_DENOMINATOR / rate)`.
 2. **Stepper**: After the binary search converges, fine-tune by adding or removing 1 token at a time from the pool with the best or worst marginal rate, until the total exactly matches the requested amount.
 3. **Pool elimination**: Each additional pool adds ~197 bytes to the transaction. If a pool's cost savings don't exceed its byte overhead, it gets dropped and the trade is re-solved with the remaining pools.
+4. **Pool cap**: A hard cap (`MAX_POOLS_PER_TRANSACTION = 350`) ensures the transaction stays within BCH's 100KB consensus size limit. If the allocation still exceeds the cap after elimination, the largest allocations are kept and the trade is re-solved with just those pools.
 
 The algorithm uses bigint arithmetic throughout to avoid floating-point rounding issues.
 
 ## Key functions
 
-- `computeOptimalBuy(pools, totalTokensToBuy, txFeePerByte)` — Returns a `PoolAllocation[]` with the optimal split for buying tokens.
-- `computeOptimalSell(pools, totalTokensToSell, txFeePerByte)` — Returns a `PoolAllocation[]` with the optimal split for selling tokens.
+- `computeOptimalBuy(pools, totalTokensToBuy, txFeePerByte, maxPools?)` — Returns a `PoolAllocation[]` with the optimal split for buying tokens.
+- `computeOptimalSell(pools, totalTokensToSell, txFeePerByte, maxPools?)` — Returns a `PoolAllocation[]` with the optimal split for selling tokens.
 
 Each `PoolAllocation` contains `{ pool, demandAmount, supplyAmount, feeAmount }`.
 
