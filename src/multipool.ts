@@ -278,18 +278,25 @@ function solveSellAllocations(
 
 export function computeBuyAmountBelowRate(
   pools: CauldronActivePool[],
-  maxSatsPerToken: bigint
+  maxSatsPerToken: bigint,
+  includeFees: boolean = true
 ): bigint {
   if (pools.length === 0) throw new Error('No pools provided');
   if (maxSatsPerToken <= 0n) throw new Error('maxSatsPerToken must be positive');
+
+  // The 0.3% fee makes the effective rate 1.003x the raw AMM rate.
+  // To find the amount where the effective (fee-inclusive) rate equals the limit,
+  // we solve at the fee-adjusted raw rate: maxSatsPerToken * 1000 / 1003.
+  let effectiveRate = maxSatsPerToken;
+  if (includeFees) {
+    effectiveRate = maxSatsPerToken * 1000n / 1003n;
+  }
 
   let totalAmount = 0n;
   for (const pool of pools) {
     const poolConstantK = BigInt(pool.tokens) * BigInt(pool.sats);
     const tokens = BigInt(pool.tokens);
-    // Current marginal rate for this pool: K / tokens^2
-    // At the limit rate, tokens would be: isqrt(K / maxSatsPerToken)
-    const tokensAtLimit = isqrt(poolConstantK / maxSatsPerToken);
+    const tokensAtLimit = isqrt(poolConstantK / effectiveRate);
     if (tokensAtLimit < tokens) {
       totalAmount += tokens - tokensAtLimit;
     }
@@ -299,17 +306,25 @@ export function computeBuyAmountBelowRate(
 
 export function computeSellAmountAboveRate(
   pools: CauldronActivePool[],
-  minSatsPerToken: bigint
+  minSatsPerToken: bigint,
+  includeFees: boolean = true
 ): bigint {
   if (pools.length === 0) throw new Error('No pools provided');
   if (minSatsPerToken <= 0n) throw new Error('minSatsPerToken must be positive');
+
+  // The 0.3% fee means the user receives 0.997x the raw AMM rate.
+  // To find the amount where the effective (fee-inclusive) rate equals the limit,
+  // we solve at the fee-adjusted raw rate: minSatsPerToken * 1000 / 997.
+  let effectiveRate = minSatsPerToken;
+  if (includeFees) {
+    effectiveRate = minSatsPerToken * 1000n / 997n;
+  }
 
   let totalAmount = 0n;
   for (const pool of pools) {
     const poolConstantK = BigInt(pool.tokens) * BigInt(pool.sats);
     const tokens = BigInt(pool.tokens);
-    // At the limit rate, tokens would be: isqrt(K / minSatsPerToken)
-    const tokensAtLimit = isqrt(poolConstantK / minSatsPerToken);
+    const tokensAtLimit = isqrt(poolConstantK / effectiveRate);
     if (tokensAtLimit > tokens) {
       totalAmount += tokensAtLimit - tokens;
     }

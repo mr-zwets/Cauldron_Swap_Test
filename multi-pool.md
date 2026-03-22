@@ -28,10 +28,12 @@ Each `PoolAllocation` contains `{ pool, demandAmount, supplyAmount, feeAmount }`
 
 Two helpers let consumers query how much liquidity is available at a given price, without committing to a trade:
 
-- `computeBuyAmountBelowRate(pools, maxSatsPerToken)` — How many tokens can be bought before the marginal rate exceeds `maxSatsPerToken`.
-- `computeSellAmountAboveRate(pools, minSatsPerToken)` — How many tokens can be sold before the marginal rate drops below `minSatsPerToken`.
+- `computeBuyAmountBelowRate(pools, maxSatsPerToken, includeFees?)` — How many tokens can be bought before the effective rate exceeds `maxSatsPerToken`.
+- `computeSellAmountAboveRate(pools, minSatsPerToken, includeFees?)` — How many tokens can be sold before the effective rate drops below `minSatsPerToken`.
 
 Both return a `bigint` amount that can be fed directly into `computeOptimalBuy` / `computeOptimalSell`. This enables limit-order-style workflows: query the available amount, let the user decide, then execute via the existing path.
+
+By default (`includeFees = true`), the 0.3% swap fee is factored into the rate calculation so the returned amount reflects what the user would actually pay or receive. Pass `includeFees = false` to get the raw AMM amount without fee adjustment.
 
 ## Transaction layout
 

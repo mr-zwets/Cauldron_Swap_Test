@@ -333,6 +333,24 @@ describe('computeBuyAmountBelowRate', () => {
     }
   });
 
+  test('fee-inclusive returns less than fee-exclusive', () => {
+    const pool = makePool(100_000_000, 1_000_000);
+    const withFees = computeBuyAmountBelowRate([pool], 200n);
+    const withoutFees = computeBuyAmountBelowRate([pool], 200n, false);
+    expect(withoutFees > withFees).toBe(true);
+  });
+
+  test('includeFees=false matches raw AMM math', () => {
+    // Without fees, tokensAtLimit = isqrt(K / rate)
+    const pool = makePool(100_000_000, 1_000_000);
+    const poolConstantK = BigInt(pool.tokens) * BigInt(pool.sats);
+    const rate = 200n;
+    const expectedTokensAtLimit = isqrt(poolConstantK / rate);
+    const expectedAmount = BigInt(pool.tokens) - expectedTokensAtLimit;
+    const amount = computeBuyAmountBelowRate([pool], rate, false);
+    expect(amount).toBe(expectedAmount);
+  });
+
   test('throws on invalid inputs', () => {
     expect(() => computeBuyAmountBelowRate([], 100n)).toThrow(/No pools provided/);
     const pool = makePool(100_000_000, 1_000_000);
@@ -382,6 +400,25 @@ describe('computeSellAmountAboveRate', () => {
       const totalDemand = allocations.reduce((sum, allocation) => sum + allocation.demandAmount, 0n);
       expect(totalDemand).toBe(amount);
     }
+  });
+
+  test('fee-inclusive returns less than fee-exclusive', () => {
+    // Rate must be large enough (>=998) for the 0.3% integer adjustment to produce
+    // a different value after bigint division: rate * 1000 / 997 != rate
+    const pool = makePool(10_000_000_000, 1_000_000);
+    const withFees = computeSellAmountAboveRate([pool], 5000n);
+    const withoutFees = computeSellAmountAboveRate([pool], 5000n, false);
+    expect(withoutFees > withFees).toBe(true);
+  });
+
+  test('includeFees=false matches raw AMM math', () => {
+    const pool = makePool(100_000_000, 1_000_000);
+    const poolConstantK = BigInt(pool.tokens) * BigInt(pool.sats);
+    const rate = 50n;
+    const expectedTokensAtLimit = isqrt(poolConstantK / rate);
+    const expectedAmount = expectedTokensAtLimit - BigInt(pool.tokens);
+    const amount = computeSellAmountAboveRate([pool], rate, false);
+    expect(amount).toBe(expectedAmount);
   });
 
   test('throws on invalid inputs', () => {
