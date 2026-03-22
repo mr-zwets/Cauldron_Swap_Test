@@ -24,7 +24,7 @@ pnpm test -- --run test/swap.test.ts  # run a single test file
 ### Key modules
 
 - `src/index.ts` — Exported API: `getCauldronPools`, `prepareBuyTokens`, `prepareSellTokens`, `prepareWithdrawAll`
-- `src/multipool.ts` — Pure bigint math module for optimal trade splitting across multiple pools. Exports `computeOptimalBuy`, `computeOptimalSell`, and helpers (`isqrt`, `ceilDiv`, `calcBuyFromPool`, `calcSellToPool`)
+- `src/multipool.ts` — Pure bigint math module for optimal trade splitting across multiple pools. Exports `computeOptimalBuy`, `computeOptimalSell`, rate-targeted helpers (`computeBuyAmountBelowRate`, `computeSellAmountAboveRate`), and math utilities (`isqrt`, `ceilDiv`, `calcBuyFromPool`, `calcSellToPool`)
 - `src/utils.ts` — `cauldronArtifactWithPkh()` patches a `<withdraw_pkh>` placeholder in artifact bytecode at runtime; `convertPoolToUtxo()` adapts pool data to CashScript UTXO format; `validateTokenAddress()` validates CashAddress is token-aware; `gatherBchUtxos()` / `gatherTokenUtxos()` for UTXO selection
 - `src/interfaces.ts` — `CauldronActivePool` and `PoolAllocation` type definitions
 - `src/artifact/` — Two custom CashScript JSON artifacts (swap and managePool) since the Cauldron contract is raw BCH Script, not CashScript (see `artifacts.md` for rationale)

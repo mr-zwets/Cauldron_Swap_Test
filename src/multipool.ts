@@ -276,6 +276,47 @@ function solveSellAllocations(
   return allocations.filter(allocation => allocation.demand > 0n);
 }
 
+export function computeBuyAmountBelowRate(
+  pools: CauldronActivePool[],
+  maxSatsPerToken: bigint
+): bigint {
+  if (pools.length === 0) throw new Error('No pools provided');
+  if (maxSatsPerToken <= 0n) throw new Error('maxSatsPerToken must be positive');
+
+  let totalAmount = 0n;
+  for (const pool of pools) {
+    const poolConstantK = BigInt(pool.tokens) * BigInt(pool.sats);
+    const tokens = BigInt(pool.tokens);
+    // Current marginal rate for this pool: K / tokens^2
+    // At the limit rate, tokens would be: isqrt(K / maxSatsPerToken)
+    const tokensAtLimit = isqrt(poolConstantK / maxSatsPerToken);
+    if (tokensAtLimit < tokens) {
+      totalAmount += tokens - tokensAtLimit;
+    }
+  }
+  return totalAmount;
+}
+
+export function computeSellAmountAboveRate(
+  pools: CauldronActivePool[],
+  minSatsPerToken: bigint
+): bigint {
+  if (pools.length === 0) throw new Error('No pools provided');
+  if (minSatsPerToken <= 0n) throw new Error('minSatsPerToken must be positive');
+
+  let totalAmount = 0n;
+  for (const pool of pools) {
+    const poolConstantK = BigInt(pool.tokens) * BigInt(pool.sats);
+    const tokens = BigInt(pool.tokens);
+    // At the limit rate, tokens would be: isqrt(K / minSatsPerToken)
+    const tokensAtLimit = isqrt(poolConstantK / minSatsPerToken);
+    if (tokensAtLimit > tokens) {
+      totalAmount += tokensAtLimit - tokens;
+    }
+  }
+  return totalAmount;
+}
+
 export function computeOptimalBuy(
   pools: CauldronActivePool[],
   totalTokensToBuy: bigint,

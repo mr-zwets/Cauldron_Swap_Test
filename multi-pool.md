@@ -24,6 +24,15 @@ The algorithm uses bigint arithmetic throughout to avoid floating-point rounding
 
 Each `PoolAllocation` contains `{ pool, demandAmount, supplyAmount, feeAmount }`.
 
+## Rate-targeted helpers
+
+Two helpers let consumers query how much liquidity is available at a given price, without committing to a trade:
+
+- `computeBuyAmountBelowRate(pools, maxSatsPerToken)` — How many tokens can be bought before the marginal rate exceeds `maxSatsPerToken`.
+- `computeSellAmountAboveRate(pools, minSatsPerToken)` — How many tokens can be sold before the marginal rate drops below `minSatsPerToken`.
+
+Both return a `bigint` amount that can be fed directly into `computeOptimalBuy` / `computeOptimalSell`. This enables limit-order-style workflows: query the available amount, let the user decide, then execute via the existing path.
+
 ## Transaction layout
 
 The Cauldron contract uses `OP_INPUTINDEX` to validate that its output matches its input position. So multi-pool transactions must place cauldron inputs/outputs first in 1:1 order:

@@ -1,4 +1,4 @@
-import { computeOptimalBuy, computeOptimalSell, calcBuyFromPool, calcSellToPool, isqrt, ceilDiv } from '../src/multipool.js';
+import { computeOptimalBuy, computeOptimalSell, computeBuyAmountBelowRate, computeSellAmountAboveRate, calcBuyFromPool, calcSellToPool, isqrt, ceilDiv } from '../src/multipool.js';
 import type { CauldronActivePool } from '../src/interfaces.js';
 
 const tokenId = 'd9ab24ed15a7846cc3d9e004aa5cb976860f13dac1ead05784ee4f4622af96ea';
@@ -286,5 +286,107 @@ describe('computeOptimalSell', () => {
     const singleTotal = singleResult.reduce((sum, a) => sum + a.supplyAmount, 0n);
 
     expect(multiTotal > singleTotal).toBe(true);
+  });
+});
+
+describe('computeBuyAmountBelowRate', () => {
+  test('returns 0 when all pools are above maxRate', () => {
+    // Pool rate is ~100 sats/token, so maxRate of 50 should yield nothing
+    const pool = makePool(100_000_000, 1_000_000);
+    const amount = computeBuyAmountBelowRate([pool], 50n);
+    expect(amount).toBe(0n);
+  });
+
+  test('returns tokens available below the rate', () => {
+    // Pool: 100M sats, 1M tokens → rate ~100 sats/token
+    // At maxRate 200: tokensAtLimit = isqrt(100M*1M / 200) = isqrt(500_000_000_000) ≈ 707_106
+    // Buyable: 1_000_000 - 707_106 = 292_894
+    const pool = makePool(100_000_000, 1_000_000);
+    const amount = computeBuyAmountBelowRate([pool], 200n);
+    expect(amount > 0n).toBe(true);
+    expect(amount < BigInt(pool.tokens)).toBe(true);
+  });
+
+  test('higher maxRate allows buying more tokens', () => {
+    const pool = makePool(100_000_000, 1_000_000);
+    const amountAt150 = computeBuyAmountBelowRate([pool], 150n);
+    const amountAt300 = computeBuyAmountBelowRate([pool], 300n);
+    expect(amountAt300 > amountAt150).toBe(true);
+  });
+
+  test('multiple pools sum contributions', () => {
+    const pool1 = makePool(100_000_000, 1_000_000, 'aaaa');
+    const pool2 = makePool(100_000_000, 1_000_000, 'bbbb');
+    const singleAmount = computeBuyAmountBelowRate([pool1], 200n);
+    const multiAmount = computeBuyAmountBelowRate([pool1, pool2], 200n);
+    expect(multiAmount).toBe(singleAmount * 2n);
+  });
+
+  test('result can be fed into computeOptimalBuy', () => {
+    const pool1 = makePool(100_000_000, 1_000_000, 'aaaa');
+    const pool2 = makePool(200_000_000, 2_000_000, 'bbbb');
+    const amount = computeBuyAmountBelowRate([pool1, pool2], 200n);
+    if (amount > 0n) {
+      const allocations = computeOptimalBuy([pool1, pool2], amount, 0n);
+      const totalDemand = allocations.reduce((sum, allocation) => sum + allocation.demandAmount, 0n);
+      expect(totalDemand).toBe(amount);
+    }
+  });
+
+  test('throws on invalid inputs', () => {
+    expect(() => computeBuyAmountBelowRate([], 100n)).toThrow(/No pools provided/);
+    const pool = makePool(100_000_000, 1_000_000);
+    expect(() => computeBuyAmountBelowRate([pool], 0n)).toThrow(/must be positive/);
+    expect(() => computeBuyAmountBelowRate([pool], -1n)).toThrow(/must be positive/);
+  });
+});
+
+describe('computeSellAmountAboveRate', () => {
+  test('returns 0 when all pools are below minRate', () => {
+    // Pool rate is ~100 sats/token, so minRate of 200 should yield nothing
+    const pool = makePool(100_000_000, 1_000_000);
+    const amount = computeSellAmountAboveRate([pool], 200n);
+    expect(amount).toBe(0n);
+  });
+
+  test('returns tokens sellable above the rate', () => {
+    // Pool: 100M sats, 1M tokens → rate ~100 sats/token
+    // At minRate 50: tokensAtLimit = isqrt(100M*1M / 50) = isqrt(2_000_000_000_000) ≈ 1_414_213
+    // Sellable: 1_414_213 - 1_000_000 = 414_213
+    const pool = makePool(100_000_000, 1_000_000);
+    const amount = computeSellAmountAboveRate([pool], 50n);
+    expect(amount > 0n).toBe(true);
+  });
+
+  test('lower minRate allows selling more tokens', () => {
+    const pool = makePool(100_000_000, 1_000_000);
+    const amountAt80 = computeSellAmountAboveRate([pool], 80n);
+    const amountAt30 = computeSellAmountAboveRate([pool], 30n);
+    expect(amountAt30 > amountAt80).toBe(true);
+  });
+
+  test('multiple pools sum contributions', () => {
+    const pool1 = makePool(100_000_000, 1_000_000, 'aaaa');
+    const pool2 = makePool(100_000_000, 1_000_000, 'bbbb');
+    const singleAmount = computeSellAmountAboveRate([pool1], 50n);
+    const multiAmount = computeSellAmountAboveRate([pool1, pool2], 50n);
+    expect(multiAmount).toBe(singleAmount * 2n);
+  });
+
+  test('result can be fed into computeOptimalSell', () => {
+    const pool1 = makePool(100_000_000, 1_000_000, 'aaaa');
+    const pool2 = makePool(200_000_000, 2_000_000, 'bbbb');
+    const amount = computeSellAmountAboveRate([pool1, pool2], 50n);
+    if (amount > 0n) {
+      const allocations = computeOptimalSell([pool1, pool2], amount, 0n);
+      const totalDemand = allocations.reduce((sum, allocation) => sum + allocation.demandAmount, 0n);
+      expect(totalDemand).toBe(amount);
+    }
+  });
+
+  test('throws on invalid inputs', () => {
+    expect(() => computeSellAmountAboveRate([], 100n)).toThrow(/No pools provided/);
+    const pool = makePool(100_000_000, 1_000_000);
+    expect(() => computeSellAmountAboveRate([pool], 0n)).toThrow(/must be positive/);
   });
 });

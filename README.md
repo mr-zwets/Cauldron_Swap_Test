@@ -58,6 +58,26 @@ console.log(`Receive: ${totalSatsReceived} sats (${totalFees} fees), ${effective
 const txDetails = await transactionBuilder.send()
 ```
 
+## Rate-Targeted Trading
+
+Two helpers let you query how much liquidity is available at a given price — useful for limit-order-style UIs:
+
+```ts
+import { getCauldronPools } from "./index"
+import { computeBuyAmountBelowRate, computeSellAmountAboveRate } from "./multipool"
+
+const cauldronPools = await getCauldronPools(furuTokenId)
+
+// How many tokens can I buy before the marginal rate exceeds 150 sats/token?
+const buyableAmount = computeBuyAmountBelowRate(cauldronPools, 150n)
+
+// How many tokens can I sell before the marginal rate drops below 80 sats/token?
+const sellableAmount = computeSellAmountAboveRate(cauldronPools, 80n)
+
+// Then feed the result into the existing prepare functions
+const result = await prepareBuyTokens(cauldronPools, buyableAmount, userTokenAddress, privateKeyWif)
+```
+
 ## Withdraw Liquidity
 
 ```ts
