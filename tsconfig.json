@@ -1,10 +1,17 @@
 {
   "compilerOptions": {
-    "module": "NodeNext",
+    "target": "es2024",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "noUncheckedSideEffectImports": true,
+    "libReplacement": false,
     "verbatimModuleSyntax": true,
-    "moduleResolution": "NodeNext",
-    "types": ["vitest/globals"],
     "resolveJsonModule": true,
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "declaration": true,
+    "types": []
   },
-  "include": ["src"]
+  "include": ["./src"]
 }

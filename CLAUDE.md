@@ -12,6 +12,8 @@ TypeScript SDK for interacting with Cauldron liquidity pools on Bitcoin Cash (BC
 
 ```bash
 pnpm install          # install dependencies
+pnpm build            # compile to dist/
+pnpm typecheck        # typecheck src/ and test/
 pnpm test             # run all tests (vitest in watch mode)
 pnpm test -- --run    # run tests once without watch
 pnpm test -- --run test/swap.test.ts  # run a single test file
