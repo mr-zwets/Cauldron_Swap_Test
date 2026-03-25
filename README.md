@@ -8,6 +8,14 @@ TypeScript SDK for trading on the [Cauldron DEX](https://cauldron.quest) on Bitc
 
 **Note:** Pools are fetched from the Cauldron indexer API, which is a trusted third party. All token amounts are in base units (raw on-chain amounts, `bigint`) — BCMR decimal places are not supported.
 
+## Install
+
+Install the cauldron-swap-sdk from NPM with:
+
+```bash
+pnpm install @mr-zwets/cauldron-swap-sdk
+```
+
 ## Buy Tokens
 
 ```ts
