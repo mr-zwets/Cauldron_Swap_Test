@@ -12,6 +12,10 @@ import type { CauldronActivePool, CauldronGetActivePools } from './interfaces.js
 import { cauldronArtifactWithPkh, convertPoolToUtxo, gatherBchUtxos, gatherTokenUtxos, validateTokenAddress } from './utils.js';
 import { ceilDiv, computeOptimalBuy, computeOptimalSell } from './multipool.js';
 
+// re-export types and multipool functions from the library
+export type { CauldronActivePool, PoolAllocation } from './interfaces.js';
+export { computeBuyAmountBelowRate, computeSellAmountAboveRate, computeOptimalBuy, computeOptimalSell, calcBuyFromPool, calcSellToPool } from './multipool.js';
+
 export type CauldronNetwork = 'mainnet' | 'chipnet';
 
 export const CAULDRON_INDEXER_URLS: Record<CauldronNetwork, string> = {
