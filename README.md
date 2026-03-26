@@ -19,8 +19,8 @@ pnpm install @mr-zwets/cauldron-swap-sdk
 ## Buy Tokens
 
 ```ts
-import { getCauldronPools, prepareBuyTokens } from "./index"
-import { userTokenAddress, privateKeyWif } from "./somewhere"
+import { getCauldronPools, prepareBuyTokens } from "@mr-zwets/cauldron-swap-sdk"
+import { userTokenAddress, signer } from "./config"
 
 const furuTokenId = "d9ab24ed15a7846cc3d9e004aa5cb976860f13dac1ead05784ee4f4622af96ea"
 const amountToBuy = 100_000n
@@ -32,7 +32,7 @@ const { transactionBuilder, totalSatsCost, totalFees, effectivePricePerToken } =
   cauldronPools,
   amountToBuy,
   userTokenAddress,
-  privateKeyWif
+  signer
 )
 
 // review the effective price before broadcasting
@@ -44,8 +44,8 @@ const txDetails = await transactionBuilder.send()
 ## Sell Tokens
 
 ```ts
-import { getCauldronPools, prepareSellTokens } from "./index"
-import { userTokenAddress, privateKeyWif } from "./somewhere"
+import { getCauldronPools, prepareSellTokens } from "@mr-zwets/cauldron-swap-sdk"
+import { userTokenAddress, signer } from "./config"
 
 const furuTokenId = "d9ab24ed15a7846cc3d9e004aa5cb976860f13dac1ead05784ee4f4622af96ea"
 const amountToSell = 100_000n
@@ -57,7 +57,7 @@ const { transactionBuilder, totalSatsReceived, totalFees, effectivePricePerToken
   cauldronPools,
   amountToSell,
   userTokenAddress,
-  privateKeyWif
+  signer
 )
 
 // review the effective price before broadcasting
@@ -71,8 +71,8 @@ const txDetails = await transactionBuilder.send()
 Two helpers let you query how much liquidity is available at a given price — useful for limit-order-style UIs:
 
 ```ts
-import { getCauldronPools } from "./index"
-import { computeBuyAmountBelowRate, computeSellAmountAboveRate } from "./multipool"
+import { getCauldronPools } from "@mr-zwets/cauldron-swap-sdk"
+import { computeBuyAmountBelowRate, computeSellAmountAboveRate } from "@mr-zwets/cauldron-swap-sdk"
 
 const cauldronPools = await getCauldronPools(furuTokenId)
 
@@ -83,14 +83,14 @@ const buyableAmount = computeBuyAmountBelowRate(cauldronPools, 150n)
 const sellableAmount = computeSellAmountAboveRate(cauldronPools, 80n)
 
 // Then feed the result into the existing prepare functions
-const result = await prepareBuyTokens(cauldronPools, buyableAmount, userTokenAddress, privateKeyWif)
+const result = await prepareBuyTokens(cauldronPools, buyableAmount, userTokenAddress, signer)
 ```
 
 ## Withdraw Liquidity
 
 ```ts
-import { getCauldronPools, prepareWithdrawAll } from "./index"
-import { userTokenAddress, privateKeyWif } from "./somewhere"
+import { getCauldronPools, prepareWithdrawAll } from "@mr-zwets/cauldron-swap-sdk"
+import { userTokenAddress, signer } from "./config"
 
 const furuTokenId = "d9ab24ed15a7846cc3d9e004aa5cb976860f13dac1ead05784ee4f4622af96ea"
 const poolOwnerAddress = "bitcoincash:qps99uejnueu4dsv0dd2m9u9uzxntg66nyux08wmzq"
@@ -103,7 +103,7 @@ const poolToUse = cauldronPools.find(pool => pool.owner_p2pkh_addr == poolOwnerA
 const { transactionBuilder } = await prepareWithdrawAll(
   poolToUse,
   userTokenAddress,
-  privateKeyWif,
+  signer,
 )
 
 const txDetails = await transactionBuilder.send()
@@ -113,8 +113,8 @@ const txDetails = await transactionBuilder.send()
 
 ```ts
 import { ElectrumNetworkProvider } from 'cashscript';
-import { getCauldronPools, prepareBuyTokens } from "./index"
-import { userTokenAddress, privateKeyWif } from "./somewhere"
+import { getCauldronPools, prepareBuyTokens } from "@mr-zwets/cauldron-swap-sdk"
+import { userTokenAddress, signer } from "./config"
 
 const chipnetTokenId = "53636bc8c1afbe35a7ba169eadfac0aebadeacf96954a9a066a483e885580ed4"
 const amountToBuy = 100n
@@ -128,7 +128,7 @@ const { transactionBuilder } = await prepareBuyTokens(
   cauldronPools,
   amountToBuy,
   userTokenAddress,
-  privateKeyWif,
+  signer,
   provider
 )
 

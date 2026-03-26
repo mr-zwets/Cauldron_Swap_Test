@@ -84,7 +84,7 @@ export async function prepareBuyTokens(
   pools:CauldronActivePool[],
   amountToBuy:bigint,
   userTokenAddress:string,
-  privateKeyWif:string,
+  signer:string | Uint8Array,
   provider:NetworkProvider = new ElectrumNetworkProvider('mainnet')
 ){
   validateTokenAddress(userTokenAddress)
@@ -125,7 +125,7 @@ export async function prepareBuyTokens(
     amount: changeAmount
   }
 
-  const userTemplate = new SignatureTemplate(privateKeyWif)
+  const userTemplate = new SignatureTemplate(signer)
 
   // build transaction — cauldron inputs/outputs first (OP_INPUTINDEX constraint)
   const transactionBuilder = new TransactionBuilder({ provider, maximumFeeSatsPerByte: 5 })
@@ -145,7 +145,7 @@ export async function prepareSellTokens(
   pools:CauldronActivePool[],
   amountToSell:bigint,
   userTokenAddress:string,
-  privateKeyWif:string,
+  signer:string | Uint8Array,
   provider:NetworkProvider = new ElectrumNetworkProvider('mainnet')
 ){
   validateTokenAddress(userTokenAddress)
@@ -199,7 +199,7 @@ export async function prepareSellTokens(
     }
   }
 
-  const userTemplate = new SignatureTemplate(privateKeyWif)
+  const userTemplate = new SignatureTemplate(signer)
 
   // build transaction — cauldron inputs/outputs first (OP_INPUTINDEX constraint)
   const outputs:Recipient[] = [...cauldronOutputs, userBchOutput]
@@ -222,7 +222,7 @@ export async function prepareSellTokens(
 export async function prepareWithdrawAll(
   pool:CauldronActivePool,
   userTokenAddress:string,
-  privateKeyWif:string,
+  signer:string | Uint8Array,
   provider:NetworkProvider = new ElectrumNetworkProvider('mainnet')
 ){
   validateTokenAddress(userTokenAddress)
@@ -230,7 +230,7 @@ export async function prepareWithdrawAll(
   // convert pool object to UTXO format
   const cauldronUtxo = convertPoolToUtxo(pool);
 
-  const ownerTemplate = new SignatureTemplate(privateKeyWif)
+  const ownerTemplate = new SignatureTemplate(signer)
   const ownerPk = ownerTemplate.getPublicKey()
 
   // Derive owner pkh from provided private key and compare to pool owner pkh
