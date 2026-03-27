@@ -7,7 +7,7 @@ import {
   type Recipient,
   type Utxo,
 } from 'cashscript';
-import { binToHex, hash160 } from '@bitauth/libauth'
+import { binToHex, hash160, encodeCashAddress, CashAddressType, CashAddressNetworkPrefix } from '@bitauth/libauth'
 import type { CauldronActivePool, CauldronGetActivePools } from './interfaces.js';
 import { cauldronArtifactWithPkh, convertPoolToUtxo, gatherBchUtxos, gatherTokenUtxos, validateTokenAddress } from './utils.js';
 import { ceilDiv, computeOptimalBuy, computeOptimalSell } from './multipool.js';
@@ -269,4 +269,88 @@ export async function prepareWithdrawAll(
   // all input utxos for external fee calculation
   const inputUtxos = [cauldronUtxo]
   return { transactionBuilder, inputUtxos }
+}
+
+export async function prepareCreatePool(
+  tokenId:string,
+  satsAmount:bigint,
+  tokenAmount:bigint,
+  signer:string | Uint8Array,
+  network:CauldronNetwork = 'mainnet',
+  provider:NetworkProvider = new ElectrumNetworkProvider(network)
+){
+  if(satsAmount <= 0n) throw new Error('satsAmount must be a positive number')
+  if(tokenAmount <= 0n) throw new Error('tokenAmount must be a positive number')
+
+  // Derive owner address and PKH from signer
+  const signerTemplate = new SignatureTemplate(signer)
+  const ownerPk = signerTemplate.getPublicKey()
+  const ownerPkh = binToHex(hash160(ownerPk))
+  const addressPrefix = network === 'mainnet' ? CashAddressNetworkPrefix.mainnet : CashAddressNetworkPrefix.testnet;
+  const userTokenAddress = encodeCashAddress({ prefix: addressPrefix, type: CashAddressType.p2pkhWithTokens, payload: hash160(ownerPk) }).address
+
+  // Build the Cauldron contract for this owner
+  const cauldronArtifact = cauldronArtifactWithPkh(ownerPkh)
+  const options = { provider, addressType:'p2sh32' as const };
+  const cauldronContract = new Contract(cauldronArtifact, [], options)
+
+  // Fetch user UTXOs
+  const userUtxos = await provider.getUtxos(userTokenAddress)
+  const userBchUtxos = userUtxos.filter(utxo => !utxo.token)
+  const userTokenUtxos = userUtxos.filter(utxo => utxo.token?.category === tokenId)
+
+  // Select token inputs
+  const { userTokenInputTotal, userTokenInputs } = gatherTokenUtxos(userTokenUtxos, tokenAmount)
+
+  // Calculate fees and required BCH
+  const tokenChangeAmount = userTokenInputTotal - tokenAmount
+  const tokenChangeDust = tokenChangeAmount > 0n ? 1000n : 0n
+  const feePerUserInput = 180n
+  const baseFee = 2000n + feePerUserInput * BigInt(userTokenInputs.length)
+  const requiredBchAmount = satsAmount + tokenChangeDust + baseFee
+
+  // Select BCH inputs
+  const { userBchInputTotal, bchInputUtxos } = gatherBchUtxos(userBchUtxos, requiredBchAmount)
+
+  // BCH sitting on token input UTXOs
+  const bchOnTokenInputs = userTokenInputs.reduce((sum, utxo) => sum + utxo.satoshis, 0n)
+  const bchChange = userBchInputTotal + bchOnTokenInputs - requiredBchAmount
+
+  // Build outputs
+  const poolOutput:Recipient = {
+    to: cauldronContract.tokenAddress,
+    amount: satsAmount,
+    token: {
+      category: tokenId,
+      amount: tokenAmount,
+    },
+  }
+
+  const changeOutputs:Recipient[] = []
+
+  if(bchChange > 0n){
+    changeOutputs.push({ to: userTokenAddress, amount: bchChange })
+  }
+
+  if(tokenChangeAmount > 0n){
+    changeOutputs.push({
+      to: userTokenAddress,
+      amount: tokenChangeDust,
+      token: {
+        category: tokenId,
+        amount: tokenChangeAmount,
+      },
+    })
+  }
+
+  // Build transaction: pool output → OP_RETURN → change outputs
+  const transactionBuilder = new TransactionBuilder({ provider, maximumFeeSatsPerByte: 5 })
+  transactionBuilder.addInputs(userTokenInputs, signerTemplate.unlockP2PKH())
+    .addInputs(bchInputUtxos, signerTemplate.unlockP2PKH())
+    .addOutput(poolOutput)
+    .addOpReturnOutput(['SUMMON', '0x' + ownerPkh])
+    .addOutputs(changeOutputs)
+
+  const inputUtxos = [...userTokenInputs, ...bchInputUtxos]
+  return { transactionBuilder, inputUtxos, poolContractAddress: cauldronContract.tokenAddress, ownerPkh }
 }

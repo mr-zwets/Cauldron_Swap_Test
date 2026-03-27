@@ -86,6 +86,31 @@ const sellableAmount = computeSellAmountAboveRate(cauldronPools, 80n)
 const result = await prepareBuyTokens(cauldronPools, buyableAmount, userTokenAddress, signer)
 ```
 
+## Create Pool
+
+```ts
+import { prepareCreatePool } from "@mr-zwets/cauldron-swap-sdk"
+import { signer } from "./config"
+
+const furuTokenId = "d9ab24ed15a7846cc3d9e004aa5cb976860f13dac1ead05784ee4f4622af96ea"
+const satsAmount = 100_000n    // BCH liquidity to seed the pool with
+const tokenAmount = 100n       // token base units to seed the pool with
+
+// the signer's token address is derived automatically
+const { transactionBuilder, poolContractAddress, ownerPkh } = await prepareCreatePool(
+  furuTokenId,
+  satsAmount,
+  tokenAmount,
+  signer,
+)
+
+console.log(`Pool contract: ${poolContractAddress}`)
+
+const txDetails = await transactionBuilder.send()
+```
+
+The transaction includes an `OP_RETURN SUMMON <PKH>` output so the Cauldron indexer picks up the new pool immediately.
+
 ## Withdraw Liquidity
 
 ```ts

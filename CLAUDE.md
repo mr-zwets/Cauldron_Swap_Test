@@ -25,7 +25,7 @@ pnpm test -- --run test/swap.test.ts  # run a single test file
 
 ### Key modules
 
-- `src/index.ts` — Exported API: `getCauldronPools`, `prepareBuyTokens`, `prepareSellTokens`, `prepareWithdrawAll`
+- `src/index.ts` — Exported API: `getCauldronPools`, `prepareBuyTokens`, `prepareSellTokens`, `prepareWithdrawAll`, `prepareCreatePool`
 - `src/multipool.ts` — Pure bigint math module for optimal trade splitting across multiple pools. Exports `computeOptimalBuy`, `computeOptimalSell`, rate-targeted helpers (`computeBuyAmountBelowRate`, `computeSellAmountAboveRate`), and math utilities (`isqrt`, `ceilDiv`, `calcBuyFromPool`, `calcSellToPool`)
 - `src/utils.ts` — `cauldronArtifactWithPkh()` patches a `<withdraw_pkh>` placeholder in artifact bytecode at runtime; `convertPoolToUtxo()` adapts pool data to CashScript UTXO format; `validateTokenAddress()` validates CashAddress is token-aware; `gatherBchUtxos()` / `gatherTokenUtxos()` for UTXO selection
 - `src/interfaces.ts` — `CauldronActivePool` and `PoolAllocation` type definitions
@@ -48,11 +48,13 @@ Multi-pool transactions place cauldron inputs/outputs first in 1:1 order (requir
 
 ### Transaction building
 
-All prepare functions (`prepareBuyTokens`, `prepareSellTokens`, `prepareWithdrawAll`) return `{ transactionBuilder, inputUtxos }` instead of broadcasting directly. Consumers call `.send()` on the builder to broadcast, or `.build()` to get the raw hex. The `inputUtxos` array is provided for external fee calculation.
+All prepare functions (`prepareBuyTokens`, `prepareSellTokens`, `prepareWithdrawAll`, `prepareCreatePool`) return `{ transactionBuilder, inputUtxos }` instead of broadcasting directly. Consumers call `.send()` on the builder to broadcast, or `.build()` to get the raw hex. The `inputUtxos` array is provided for external fee calculation.
 
 Transactions use CashScript's `TransactionBuilder` (not the contract's higher-level `.functions` API) to manually compose inputs/outputs with `maximumFeeSatsPerByte: 5`. Contracts use `p2sh32` address type. The swap fee is 0.3% (`tradeValue / 1000 * 3`).
 
-UTXO selection: `prepareBuyTokens` uses `gatherBchUtxos` (multi-input, since trade amounts can be large). `prepareSellTokens` uses `gatherTokenUtxos` (multi-input for tokens) + a single BCH fee UTXO. Fee calculation uses a base fee + 180 sats per additional user input (+ 600 sats per additional pool in multi-pool mode).
+UTXO selection: `prepareBuyTokens` uses `gatherBchUtxos` (multi-input, since trade amounts can be large). `prepareSellTokens` uses `gatherTokenUtxos` (multi-input for tokens) + a single BCH fee UTXO. `prepareCreatePool` uses both `gatherTokenUtxos` and `gatherBchUtxos`. Fee calculation uses a base fee + 180 sats per additional user input (+ 600 sats per additional pool in multi-pool mode).
+
+Pool creation (`prepareCreatePool`): Derives the owner's token address and PKH from the signer, templates the contract artifact, and builds a transaction that sends BCH + tokens to the contract's token address. Output order: pool UTXO (index 0), `OP_RETURN SUMMON <PKH>` (index 1, for indexer discovery), then change outputs. Unlike buy/sell/withdraw, it does not take a `userTokenAddress` parameter — the address is derived from the signer.
 
 ### Dependencies
 
