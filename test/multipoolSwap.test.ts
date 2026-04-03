@@ -69,7 +69,8 @@ describe('multi-pool buy', () => {
     const { transactionBuilder, inputUtxos } = await prepareBuyTokens(
       pools, 1000n, testUserTokenAddress, testUserWif, provider
     );
-
+    expect(() => transactionBuilder.debug()).not.toThrow();
+    
     const txHex = transactionBuilder.build();
     const { txFeeRate } = calculateTransactionFee(txHex, inputUtxos);
     expect(txFeeRate > 1 && txFeeRate < 5).toBe(true);
@@ -83,6 +84,7 @@ describe('multi-pool buy', () => {
     const { transactionBuilder, inputUtxos } = await prepareBuyTokens(
       pools, 500n, testUserTokenAddress, testUserWif, provider
     );
+    expect(() => transactionBuilder.debug()).not.toThrow();
 
     const txHex = transactionBuilder.build();
     const { txFeeRate } = calculateTransactionFee(txHex, inputUtxos);
@@ -97,6 +99,7 @@ describe('multi-pool buy', () => {
     const { transactionBuilder, inputUtxos } = await prepareBuyTokens(
       pools, 100n, testUserTokenAddress, testUserWif, provider
     );
+    expect(() => transactionBuilder.debug()).not.toThrow();
 
     const txHex = transactionBuilder.build();
     const { txFeeRate } = calculateTransactionFee(txHex, inputUtxos);
@@ -127,7 +130,8 @@ describe('multi-pool sell', () => {
     const { transactionBuilder, inputUtxos } = await prepareSellTokens(
       pools, 500n, testUserTokenAddress, testUserWif, provider
     );
-
+    expect(() => transactionBuilder.debug()).not.toThrow();
+    
     const txHex = transactionBuilder.build();
     const { txFeeRate } = calculateTransactionFee(txHex, inputUtxos);
     expect(txFeeRate > 1 && txFeeRate < 5).toBe(true);
@@ -144,6 +148,7 @@ describe('multi-pool sell', () => {
     const { transactionBuilder, inputUtxos } = await prepareSellTokens(
       pools, 300n, testUserTokenAddress, testUserWif, provider
     );
+    expect(() => transactionBuilder.debug()).not.toThrow();
 
     const txHex = transactionBuilder.build();
     const { txFeeRate } = calculateTransactionFee(txHex, inputUtxos);
@@ -161,7 +166,8 @@ describe('multi-pool sell', () => {
     const { transactionBuilder, inputUtxos } = await prepareSellTokens(
       pools, 100n, testUserTokenAddress, testUserWif, provider
     );
-
+    expect(() => transactionBuilder.debug()).not.toThrow();
+    
     const txHex = transactionBuilder.build();
     const { txFeeRate } = calculateTransactionFee(txHex, inputUtxos);
     expect(txFeeRate > 1 && txFeeRate < 5).toBe(true);

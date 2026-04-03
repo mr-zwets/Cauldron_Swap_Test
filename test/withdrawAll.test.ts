@@ -31,6 +31,8 @@ describe('prepareWithdrawAll', () => {
     const { transactionBuilder, inputUtxos } = await prepareWithdrawAll(
       testFuruPool, testUserTokenAddress, testUserWif, provider
     )
+    expect(() => transactionBuilder.debug()).not.toThrow()
+    
     const txHex = transactionBuilder.build()
     const { txFeeRate } = calculateTransactionFee(txHex, inputUtxos)
     expect(txFeeRate > 1 && txFeeRate < 5).toBe(true);

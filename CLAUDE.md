@@ -63,4 +63,6 @@ Pool creation (`prepareCreatePool`): Derives the owner's token address and PKH f
 
 ### Testing
 
-Tests use `MockNetworkProvider` from CashScript to avoid real blockchain calls. Test files are in `test/` and mirror the main API functions. Tests verify transaction validity via `.build()` and validate fee rates (1-5 sat/byte) using `test/utils.ts:calculateTransactionFee()`. Sell tests cover single token input, multiple small token inputs, exact balance (no change), and combined BCH+tokens on a single input. `test/multipool.test.ts` covers the pure algorithm (split correctness, rounding, pool elimination). `test/multipoolSwap.test.ts` covers multi-pool transaction building with 2-3 pools.
+Tests use `MockNetworkProvider` from CashScript to avoid real blockchain calls. Test files are in `test/` and mirror the main API functions. Tests verify transaction serialization via `.build()` and validate fee rates (1-5 sat/byte) using `test/utils.ts:calculateTransactionFee()`. Use `.debug()` to verify contract script evaluation — `.build()` only serializes the transaction without evaluating the script.
+
+Sell tests cover single token input, multiple small token inputs, exact balance (no change), and combined BCH+tokens on a single input. `test/multipool.test.ts` covers the pure algorithm (split correctness, rounding, pool elimination). `test/multipoolSwap.test.ts` covers multi-pool transaction building with 2-3 pools.

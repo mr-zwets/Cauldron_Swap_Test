@@ -65,6 +65,8 @@ describe('prepareSellTokens', () => {
     const { transactionBuilder, inputUtxos } = await prepareSellTokens(
       [testFuruPool], 100n, testUserTokenAddress, testUserWif, provider
     )
+    expect(() => transactionBuilder.debug()).not.toThrow()
+
     const txHex = transactionBuilder.build()
     const { txFeeRate } = calculateTransactionFee(txHex, inputUtxos)
     expect(txFeeRate > 1 && txFeeRate < 5).toBe(true);
@@ -83,6 +85,8 @@ describe('prepareSellTokens', () => {
     const { transactionBuilder, inputUtxos } = await prepareSellTokens(
       [testFuruPool], 100n, testUserTokenAddress, testUserWif, provider
     )
+    expect(() => transactionBuilder.debug()).not.toThrow()
+
     const txHex = transactionBuilder.build()
     const { txFeeRate } = calculateTransactionFee(txHex, inputUtxos)
     expect(txFeeRate > 1 && txFeeRate < 5).toBe(true);
@@ -98,6 +102,8 @@ describe('prepareSellTokens', () => {
     const { transactionBuilder, inputUtxos } = await prepareSellTokens(
       [testFuruPool], 200n, testUserTokenAddress, testUserWif, provider
     )
+    expect(() => transactionBuilder.debug()).not.toThrow()
+
     const txHex = transactionBuilder.build()
     const { txFeeRate } = calculateTransactionFee(txHex, inputUtxos)
     expect(txFeeRate > 1 && txFeeRate < 5).toBe(true);
@@ -113,6 +119,8 @@ describe('prepareSellTokens', () => {
     const { transactionBuilder, inputUtxos } = await prepareSellTokens(
       [testFuruPool], 100n, testUserTokenAddress, testUserWif, provider
     )
+    expect(() => transactionBuilder.debug()).not.toThrow()
+    
     const txHex = transactionBuilder.build()
     const { txFeeRate } = calculateTransactionFee(txHex, inputUtxos)
     expect(txFeeRate > 1 && txFeeRate < 5).toBe(true);
