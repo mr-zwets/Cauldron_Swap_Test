@@ -50,7 +50,7 @@ Multi-pool transactions place cauldron inputs/outputs first in 1:1 order (requir
 
 All prepare functions (`prepareBuyTokens`, `prepareSellTokens`, `prepareWithdrawAll`, `prepareCreatePool`) return `{ transactionBuilder, inputUtxos }` instead of broadcasting directly. Consumers call `.send()` on the builder to broadcast, or `.build()` to get the raw hex. The `inputUtxos` array is provided for external fee calculation.
 
-Transactions use CashScript's `TransactionBuilder` (not the contract's higher-level `.functions` API) to manually compose inputs/outputs with `maximumFeeSatsPerByte: 5`. Contracts use `p2sh32` address type. The swap fee is 0.3% (`tradeValue / 1000 * 3`).
+Transactions use CashScript's `TransactionBuilder` (not the contract's higher-level `.functions` API) to manually compose inputs/outputs with `maximumFeeSatsPerByte: 5`. Contracts use `p2sh32` address type. The swap fee is 0.3% (calculated differently for buys vs sells to match the on-chain contract).
 
 UTXO selection: `prepareBuyTokens` uses `gatherBchUtxos` (multi-input, since trade amounts can be large). `prepareSellTokens` uses `gatherTokenUtxos` (multi-input for tokens) + a single BCH fee UTXO. `prepareCreatePool` uses both `gatherTokenUtxos` and `gatherBchUtxos`. Fee calculation uses a base fee + 180 sats per additional user input (+ 600 sats per additional pool in multi-pool mode).
 

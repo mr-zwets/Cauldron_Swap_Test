@@ -57,8 +57,13 @@ function buildCauldronInputsOutputs(
       tradeValue = BigInt(pool.sats) - ceilDiv(poolConstantK, newTokens)
     }
     // apply 0.3% swap fee
+    // For buys: the contract computes fee on the total sats delta (which includes the fee),
+    // so we solve the circular dependency: fee = ceil(3 * tradeValue / 997)
+    // For sells: tradeValue * 3 / 1000 is conservative (overpays slightly), which is fine
     const newSatsExclFee = ceilDiv(poolConstantK, newTokens)
-    const feeAmount = tradeValue * 3n / 1000n
+    const feeAmount = direction === 'buy'
+      ? ceilDiv(tradeValue * 3n, 997n)
+      : tradeValue * 3n / 1000n
     const newSats = newSatsExclFee + feeAmount
     const newTokensOutput = ceilDiv(poolConstantK, newSatsExclFee)
 

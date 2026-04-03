@@ -73,6 +73,39 @@ describe('prepareBuyTokens', () => {
     const { transactionBuilder, inputUtxos } = await prepareBuyTokens(
       [testFuruPool], 100n, testUserTokenAddress, testUserWif, provider
     )
+    expect(() => transactionBuilder.debug()).not.toThrow()
+    const txHex = transactionBuilder.build()
+    const { txFeeRate } = calculateTransactionFee(txHex, inputUtxos)
+    expect(txFeeRate > 1 && txFeeRate < 5).toBe(true);
+  })
+
+  test('should succeed with large buy relative to pool size (fee rounding)', async() => {
+    // Small pool where buy fee rounding matters for contract evaluation
+    const smallPool: CauldronActivePool = {
+      owner_p2pkh_addr: "bitcoincash:zr8g5yrw0vzdc2evjgpjfwlsrn67d5wtqcjhnwf345",
+      owner_pkh: "ce8a106e7b04dc2b2c920324bbf01cf5e6d1cb06",
+      sats: 1_000_000,
+      token_id: "d9ab24ed15a7846cc3d9e004aa5cb976860f13dac1ead05784ee4f4622af96ea",
+      tokens: 1_000,
+      tx_pos: 0,
+      txid: "aa183eb292e7b0c733988e931286bb0f47cf01cec12bd1b6d9c850def024e4bb"
+    }
+    const userInputs = [
+      randomUtxo({ satoshis: 500_000_000n }),
+    ]
+    const provider = new MockNetworkProvider();
+    const options = { provider, addressType:'p2sh32' as const };
+    const cauldronContract = new Contract(cauldronArtifactWithPkh(smallPool.owner_pkh), [], options);
+    provider.addUtxo(cauldronContract.address, convertPoolToUtxo(smallPool))
+    for (const utxo of userInputs) {
+      provider.addUtxo(testUserTokenAddress, utxo);
+    }
+
+    // Buy 300 tokens (30% of pool) — triggers fee rounding mismatch
+    const { transactionBuilder, inputUtxos } = await prepareBuyTokens(
+      [smallPool], 300n, testUserTokenAddress, testUserWif, provider
+    )
+    expect(() => transactionBuilder.debug()).not.toThrow()
     const txHex = transactionBuilder.build()
     const { txFeeRate } = calculateTransactionFee(txHex, inputUtxos)
     expect(txFeeRate > 1 && txFeeRate < 5).toBe(true);

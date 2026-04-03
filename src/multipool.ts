@@ -29,7 +29,9 @@ export function calcBuyFromPool(pool: CauldronActivePool, demandTokens: bigint):
   if (newTokens <= 0n) throw new Error('Cannot buy more tokens than pool has');
   const newSatsExclFee = ceilDiv(poolConstantK, newTokens);
   const tradeValue = newSatsExclFee - BigInt(pool.sats);
-  const feeAmount = tradeValue * 3n / 1000n;
+  // The contract computes fee on the total sats delta (which includes the fee),
+  // so we solve: fee = ceil(3 * tradeValue / 997)
+  const feeAmount = ceilDiv(tradeValue * 3n, 997n);
   const supplyAmount = tradeValue + feeAmount;
   return { supplyAmount, feeAmount };
 }

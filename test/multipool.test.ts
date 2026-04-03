@@ -46,37 +46,22 @@ describe('ceilDiv', () => {
 });
 
 describe('calcBuyFromPool', () => {
-  test('matches existing single-pool math', () => {
+  test('computes correct cost and fee', () => {
     const pool = makePool(587793838, 4363102);
-    const amountToBuy = 100n;
-
-    const { supplyAmount, feeAmount } = calcBuyFromPool(pool, amountToBuy);
-
-    // Replicate existing math
-    const poolConstant = pool.tokens * pool.sats;
-    const newSatsExclFee = Math.ceil(poolConstant / (pool.tokens - Number(amountToBuy)));
-    const tradeValue = Math.abs(newSatsExclFee - pool.sats);
-    const poolFee = Math.floor(tradeValue / 1000 * 3);
-
-    expect(supplyAmount).toBe(BigInt(tradeValue + poolFee));
-    expect(feeAmount).toBe(BigInt(poolFee));
+    const { supplyAmount, feeAmount } = calcBuyFromPool(pool, 100n);
+    // fee uses ceil(tradeValue * 3 / 997) to match on-chain contract
+    expect(supplyAmount).toBe(13514n);
+    expect(feeAmount).toBe(41n);
   });
 });
 
 describe('calcSellToPool', () => {
-  test('matches existing single-pool math', () => {
+  test('computes correct payout and fee', () => {
     const pool = makePool(587793838, 4363102);
-    const amountToSell = 100n;
-
-    const { supplyAmount, feeAmount } = calcSellToPool(pool, amountToSell);
-
-    const poolConstant = pool.tokens * pool.sats;
-    const newSatsExclFee = Math.ceil(poolConstant / (pool.tokens + Number(amountToSell)));
-    const tradeValue = Math.abs(pool.sats - newSatsExclFee);
-    const poolFee = Math.floor(tradeValue / 1000 * 3);
-
-    expect(supplyAmount).toBe(BigInt(tradeValue - poolFee));
-    expect(feeAmount).toBe(BigInt(poolFee));
+    const { supplyAmount, feeAmount } = calcSellToPool(pool, 100n);
+    // fee uses tradeValue * 3 / 1000 (conservative, slightly overpays vs on-chain)
+    expect(supplyAmount).toBe(13431n);
+    expect(feeAmount).toBe(40n);
   });
 });
 
