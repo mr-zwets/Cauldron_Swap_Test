@@ -23,6 +23,9 @@ export const CAULDRON_INDEXER_URLS: Record<CauldronNetwork, string> = {
   chipnet: 'https://indexer-chipnet.riften.net/cauldron',
 };
 
+/**
+ * Fetch all active Cauldron pools for a given token from the indexer.
+ */
 export async function getCauldronPools(tokenId:string, network:CauldronNetwork = 'mainnet'){
   const indexerUrl = CAULDRON_INDEXER_URLS[network];
   const result = await fetch(`${indexerUrl}/pool/active?token=${tokenId}`)
@@ -85,12 +88,18 @@ function buildCauldronInputsOutputs(
   return { cauldronInputs, cauldronOutputs, totalUserReceive };
 }
 
+/**
+ * Prepare a buy-tokens transaction.
+ *
+ * @param userUtxos Pre-fetched UTXOs for `userTokenAddress`; skips the internal fetch.
+ */
 export async function prepareBuyTokens(
   pools:CauldronActivePool[],
   amountToBuy:bigint,
   userTokenAddress:string,
   signer:string | Uint8Array,
-  provider:NetworkProvider = new ElectrumNetworkProvider('mainnet')
+  provider:NetworkProvider = new ElectrumNetworkProvider('mainnet'),
+  userUtxos?:Utxo[]
 ){
   validateTokenAddress(userTokenAddress)
   if(amountToBuy <= 0n) throw new Error('amountToBuy must be a positive number')
@@ -101,9 +110,8 @@ export async function prepareBuyTokens(
 
   const { cauldronInputs, cauldronOutputs } = buildCauldronInputsOutputs(allocations, 'buy', options)
 
-  // fetch user UTXOs
-  const userUtxos = await provider.getUtxos(userTokenAddress);
-  const userBchUtxos = userUtxos.filter(utxo => !utxo.token)
+  const resolvedUserUtxos = userUtxos ?? await provider.getUtxos(userTokenAddress);
+  const userBchUtxos = resolvedUserUtxos.filter(utxo => !utxo.token)
 
   // calculate required bch input amount
   const totalSupply = allocations.reduce((sum, allocation) => sum + allocation.supplyAmount, 0n)
@@ -146,12 +154,18 @@ export async function prepareBuyTokens(
   return { transactionBuilder, inputUtxos, totalSatsCost: totalSupply, totalFees, effectivePricePerToken: totalSupply / amountToBuy }
 }
 
+/**
+ * Prepare a sell-tokens transaction.
+ *
+ * @param userUtxos Pre-fetched UTXOs for `userTokenAddress`; skips the internal fetch.
+ */
 export async function prepareSellTokens(
   pools:CauldronActivePool[],
   amountToSell:bigint,
   userTokenAddress:string,
   signer:string | Uint8Array,
-  provider:NetworkProvider = new ElectrumNetworkProvider('mainnet')
+  provider:NetworkProvider = new ElectrumNetworkProvider('mainnet'),
+  userUtxos?:Utxo[]
 ){
   validateTokenAddress(userTokenAddress)
   if(amountToSell <= 0n) throw new Error('amountToSell must be a positive number')
@@ -163,10 +177,9 @@ export async function prepareSellTokens(
 
   const { cauldronInputs, cauldronOutputs, totalUserReceive } = buildCauldronInputsOutputs(allocations, 'sell', options)
 
-  // fetch user UTXOs
-  const userUtxos = await provider.getUtxos(userTokenAddress);
-  const userTokenUtxos = userUtxos.filter(utxo => utxo.token?.category === tokenId)
-  const userBchUtxos = userUtxos.filter(utxo => !utxo.token)
+  const resolvedUserUtxos = userUtxos ?? await provider.getUtxos(userTokenAddress);
+  const userTokenUtxos = resolvedUserUtxos.filter(utxo => utxo.token?.category === tokenId)
+  const userBchUtxos = resolvedUserUtxos.filter(utxo => !utxo.token)
 
   // select token inputs
   const { userTokenInputTotal, userTokenInputs } = gatherTokenUtxos(userTokenUtxos, amountToSell)
@@ -224,6 +237,9 @@ export async function prepareSellTokens(
   return { transactionBuilder, inputUtxos, totalSatsReceived: totalUserReceive, totalFees, effectivePricePerToken: totalUserReceive / amountToSell }
 }
 
+/**
+ * Prepare a transaction that withdraws all BCH and tokens from a pool the signer owns.
+ */
 export async function prepareWithdrawAll(
   pool:CauldronActivePool,
   userTokenAddress:string,
@@ -276,13 +292,19 @@ export async function prepareWithdrawAll(
   return { transactionBuilder, inputUtxos }
 }
 
+/**
+ * Prepare a create-pool transaction.
+ *
+ * @param userUtxos Pre-fetched UTXOs for the owner's token address (derived from `signer`); skips the internal fetch.
+ */
 export async function prepareCreatePool(
   tokenId:string,
   satsAmount:bigint,
   tokenAmount:bigint,
   signer:string | Uint8Array,
   network:CauldronNetwork = 'mainnet',
-  provider:NetworkProvider = new ElectrumNetworkProvider(network)
+  provider:NetworkProvider = new ElectrumNetworkProvider(network),
+  userUtxos?:Utxo[]
 ){
   if(satsAmount <= 0n) throw new Error('satsAmount must be a positive number')
   if(tokenAmount <= 0n) throw new Error('tokenAmount must be a positive number')
@@ -299,10 +321,9 @@ export async function prepareCreatePool(
   const options = { provider, addressType:'p2sh32' as const };
   const cauldronContract = new Contract(cauldronArtifact, [], options)
 
-  // Fetch user UTXOs
-  const userUtxos = await provider.getUtxos(userTokenAddress)
-  const userBchUtxos = userUtxos.filter(utxo => !utxo.token)
-  const userTokenUtxos = userUtxos.filter(utxo => utxo.token?.category === tokenId)
+  const resolvedUserUtxos = userUtxos ?? await provider.getUtxos(userTokenAddress)
+  const userBchUtxos = resolvedUserUtxos.filter(utxo => !utxo.token)
+  const userTokenUtxos = resolvedUserUtxos.filter(utxo => utxo.token?.category === tokenId)
 
   // Select token inputs
   const { userTokenInputTotal, userTokenInputs } = gatherTokenUtxos(userTokenUtxos, tokenAmount)

@@ -22,6 +22,9 @@ export function ceilDiv(numerator: bigint, denominator: bigint): bigint {
   return (numerator + denominator - 1n) / denominator;
 }
 
+/**
+ * Sats a buyer must supply (incl. 0.3% fee) to take `demandTokens` out of a single pool.
+ */
 export function calcBuyFromPool(pool: CauldronActivePool, demandTokens: bigint): { supplyAmount: bigint; feeAmount: bigint } {
   if (demandTokens === 0n) return { supplyAmount: 0n, feeAmount: 0n };
   const poolConstantK = BigInt(pool.tokens) * BigInt(pool.sats);
@@ -36,6 +39,9 @@ export function calcBuyFromPool(pool: CauldronActivePool, demandTokens: bigint):
   return { supplyAmount, feeAmount };
 }
 
+/**
+ * Sats a seller receives (net of 0.3% fee) when putting `demandTokens` into a single pool.
+ */
 export function calcSellToPool(pool: CauldronActivePool, demandTokens: bigint): { supplyAmount: bigint; feeAmount: bigint } {
   if (demandTokens === 0n) return { supplyAmount: 0n, feeAmount: 0n };
   const poolConstantK = BigInt(pool.tokens) * BigInt(pool.sats);
@@ -278,6 +284,9 @@ function solveSellAllocations(
   return allocations.filter(allocation => allocation.demand > 0n);
 }
 
+/**
+ * Max tokens buyable across `pools` before the marginal price exceeds `maxSatsPerToken`.
+ */
 export function computeBuyAmountBelowRate(
   pools: CauldronActivePool[],
   maxSatsPerToken: bigint,
@@ -306,6 +315,9 @@ export function computeBuyAmountBelowRate(
   return totalAmount;
 }
 
+/**
+ * Max tokens sellable across `pools` before the marginal price drops below `minSatsPerToken`.
+ */
 export function computeSellAmountAboveRate(
   pools: CauldronActivePool[],
   minSatsPerToken: bigint,
@@ -334,6 +346,9 @@ export function computeSellAmountAboveRate(
   return totalAmount;
 }
 
+/**
+ * Split a buy of `totalTokensToBuy` optimally across pools, eliminating pools whose savings don't justify their tx byte cost.
+ */
 export function computeOptimalBuy(
   pools: CauldronActivePool[],
   totalTokensToBuy: bigint,
@@ -393,6 +408,9 @@ export function computeOptimalBuy(
   });
 }
 
+/**
+ * Split a sell of `totalTokensToSell` optimally across pools, eliminating pools whose savings don't justify their tx byte cost.
+ */
 export function computeOptimalSell(
   pools: CauldronActivePool[],
   totalTokensToSell: bigint,
