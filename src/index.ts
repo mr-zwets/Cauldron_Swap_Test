@@ -14,7 +14,7 @@ import { ceilDiv, computeOptimalBuy, computeOptimalSell } from './multipool.js';
 
 // re-export types and multipool functions from the library
 export type { CauldronActivePool, PoolAllocation } from './interfaces.js';
-export { computeBuyAmountBelowRate, computeSellAmountAboveRate, computeOptimalBuy, computeOptimalSell, calcBuyFromPool, calcSellToPool } from './multipool.js';
+export { computeBuyAmountBelowRate, computeSellAmountAboveRate, computeOptimalBuy, computeOptimalSell, calcBuyFromPool, calcSellToPool, bestMarginalBuyRate, bestMarginalSellRate, computeEffectiveBuyImpact, computeEffectiveSellImpact, computeMarginalBuyImpact, computeMarginalSellImpact } from './multipool.js';
 
 export type CauldronNetwork = 'mainnet' | 'chipnet';
 

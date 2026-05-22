@@ -285,6 +285,155 @@ function solveSellAllocations(
 }
 
 /**
+ * Cheapest pool's spot rate (sats per token) — what an infinitesimal buy would
+ * pay before fees. Returns `undefined` when no pool has positive token reserves.
+ */
+export function bestMarginalBuyRate(pools: CauldronActivePool[]): number | undefined {
+  let best = Number.POSITIVE_INFINITY;
+  for (const pool of pools) {
+    if (pool.tokens <= 0) continue;
+    const rate = pool.sats / pool.tokens;
+    if (rate < best) best = rate;
+  }
+  return Number.isFinite(best) ? best : undefined;
+}
+
+/**
+ * Best pool's spot rate (sats per token) — what an infinitesimal sell would
+ * receive before fees. Returns `undefined` when no pool has positive token reserves.
+ */
+export function bestMarginalSellRate(pools: CauldronActivePool[]): number | undefined {
+  let best = 0;
+  for (const pool of pools) {
+    if (pool.tokens <= 0) continue;
+    const rate = pool.sats / pool.tokens;
+    if (rate > best) best = rate;
+  }
+  return best > 0 ? best : undefined;
+}
+
+/**
+ * Premium the buyer pays above the marginal spot rate (volume-weighted fill
+ * cost vs. cheapest pool's pre-trade rate):
+ *
+ *   (effective_sats_per_token − best_marginal_buy_rate) / best_marginal_buy_rate
+ *
+ * Always non-negative for valid buys. Returns `undefined` when there are no
+ * allocations or no pool has liquidity.
+ *
+ * See {@link computeMarginalBuyImpact} for the curve-displacement metric used
+ * by the Cauldron web UI.
+ */
+export function computeEffectiveBuyImpact(
+  pools: CauldronActivePool[],
+  allocations: PoolAllocation[]
+): number | undefined {
+  const spot = bestMarginalBuyRate(pools);
+  if (spot === undefined) return undefined;
+  let totalSupply = 0n;
+  let totalDemand = 0n;
+  for (const alloc of allocations) {
+    totalSupply += alloc.supplyAmount;
+    totalDemand += alloc.demandAmount;
+  }
+  if (totalDemand === 0n) return undefined;
+  const effective = Number(totalSupply) / Number(totalDemand);
+  return (effective - spot) / spot;
+}
+
+/**
+ * Discount the seller receives below the marginal spot rate (volume-weighted
+ * received-sats per token sold vs. best pool's pre-trade rate):
+ *
+ *   (effective_sats_per_token − best_marginal_sell_rate) / best_marginal_sell_rate
+ *
+ * Always non-positive for valid sells. Returns `undefined` when there are no
+ * allocations or no pool has liquidity.
+ */
+export function computeEffectiveSellImpact(
+  pools: CauldronActivePool[],
+  allocations: PoolAllocation[]
+): number | undefined {
+  const spot = bestMarginalSellRate(pools);
+  if (spot === undefined) return undefined;
+  let totalSupply = 0n;
+  let totalDemand = 0n;
+  for (const alloc of allocations) {
+    totalSupply += alloc.supplyAmount;
+    totalDemand += alloc.demandAmount;
+  }
+  if (totalDemand === 0n) return undefined;
+  const effective = Number(totalSupply) / Number(totalDemand);
+  return (effective - spot) / spot;
+}
+
+/**
+ * How far a buy moves the pool's marginal rate ("price impact" in the
+ * Cauldron web UI):
+ *
+ *   (best_marginal_rate_after − before) / before
+ *
+ * For constant-product, on small buys this is roughly 2× the effective
+ * premium (see {@link computeEffectiveBuyImpact}). Always non-negative for
+ * valid buys. Returns `undefined` when pool/allocation data is inconsistent.
+ */
+export function computeMarginalBuyImpact(
+  pools: CauldronActivePool[],
+  allocations: PoolAllocation[]
+): number | undefined {
+  const before = bestMarginalBuyRate(pools);
+  if (before === undefined) return undefined;
+  let after = Number.POSITIVE_INFINITY;
+  for (const alloc of allocations) {
+    const pool = alloc.pool;
+    const newTokens = BigInt(pool.tokens) - alloc.demandAmount;
+    if (newTokens <= 0n) continue;
+    const k = BigInt(pool.tokens) * BigInt(pool.sats);
+    const newSatsExclFee = ceilDiv(k, newTokens);
+    const tradeValue = newSatsExclFee - BigInt(pool.sats);
+    const fee = ceilDiv(tradeValue * 3n, 997n);
+    const newSats = newSatsExclFee + fee;
+    const rate = Number(newSats) / Number(newTokens);
+    if (rate < after) after = rate;
+  }
+  if (!Number.isFinite(after)) return undefined;
+  return (after - before) / before;
+}
+
+/**
+ * How far a sell moves the pool's marginal rate:
+ *
+ *   (best_marginal_rate_after − before) / before
+ *
+ * For constant-product, on small sells this is roughly 2× the effective
+ * discount (see {@link computeEffectiveSellImpact}). Always non-positive
+ * for valid sells (rate drops). Returns `undefined` when pool/allocation
+ * data is inconsistent.
+ */
+export function computeMarginalSellImpact(
+  pools: CauldronActivePool[],
+  allocations: PoolAllocation[]
+): number | undefined {
+  const before = bestMarginalSellRate(pools);
+  if (before === undefined) return undefined;
+  let after = 0;
+  for (const alloc of allocations) {
+    const pool = alloc.pool;
+    const newTokens = BigInt(pool.tokens) + alloc.demandAmount;
+    const k = BigInt(pool.tokens) * BigInt(pool.sats);
+    const newSatsExclFee = ceilDiv(k, newTokens);
+    const tradeValue = BigInt(pool.sats) - newSatsExclFee;
+    if (tradeValue <= 0n) continue;
+    const fee = tradeValue * 3n / 1000n;
+    const newSats = newSatsExclFee + fee;
+    const rate = Number(newSats) / Number(newTokens);
+    if (rate > after) after = rate;
+  }
+  if (after <= 0) return undefined;
+  return (after - before) / before;
+}
+
+/**
  * Max tokens buyable across `pools` before the marginal price exceeds `maxSatsPerToken`.
  */
 export function computeBuyAmountBelowRate(

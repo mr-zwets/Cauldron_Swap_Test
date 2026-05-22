@@ -1,4 +1,5 @@
-import { computeOptimalBuy, computeOptimalSell, computeBuyAmountBelowRate, computeSellAmountAboveRate, calcBuyFromPool, calcSellToPool, isqrt, ceilDiv } from '../src/multipool.js';
+import { computeOptimalBuy, computeOptimalSell, computeBuyAmountBelowRate, computeSellAmountAboveRate, calcBuyFromPool, calcSellToPool, isqrt, ceilDiv, bestMarginalBuyRate, bestMarginalSellRate, computeEffectiveBuyImpact, computeEffectiveSellImpact, computeMarginalBuyImpact, computeMarginalSellImpact } from '../src/multipool.js';
+import type { PoolAllocation } from '../src/interfaces.js';
 import type { CauldronActivePool } from '../src/interfaces.js';
 
 const tokenId = 'd9ab24ed15a7846cc3d9e004aa5cb976860f13dac1ead05784ee4f4622af96ea';
@@ -410,5 +411,229 @@ describe('computeSellAmountAboveRate', () => {
     expect(() => computeSellAmountAboveRate([], 100n)).toThrow(/No pools provided/);
     const pool = makePool(100_000_000, 1_000_000);
     expect(() => computeSellAmountAboveRate([pool], 0n)).toThrow(/must be positive/);
+  });
+});
+
+describe('bestMarginalBuyRate', () => {
+  test('empty pools: undefined', () => {
+    expect(bestMarginalBuyRate([])).toBeUndefined();
+  });
+
+  test('all pools have zero tokens: undefined', () => {
+    expect(bestMarginalBuyRate([makePool(1000, 0), makePool(2000, 0)])).toBeUndefined();
+  });
+
+  test('single pool: returns sats/tokens', () => {
+    expect(bestMarginalBuyRate([makePool(100_000_000, 1_000_000)])).toBe(100);
+  });
+
+  test('multiple pools: returns lowest rate (cheapest to buy from)', () => {
+    const pools = [
+      makePool(150_000_000, 1_000_000, 'aaaa'), // 150 sats/token
+      makePool(100_000_000, 1_000_000, 'bbbb'), // 100 sats/token (cheapest)
+      makePool(200_000_000, 1_000_000, 'cccc'), // 200 sats/token
+    ];
+    expect(bestMarginalBuyRate(pools)).toBe(100);
+  });
+
+  test('skips zero-token pools', () => {
+    const pools = [makePool(1000, 0, 'aaaa'), makePool(100_000_000, 1_000_000, 'bbbb')];
+    expect(bestMarginalBuyRate(pools)).toBe(100);
+  });
+});
+
+describe('bestMarginalSellRate', () => {
+  test('empty pools: undefined', () => {
+    expect(bestMarginalSellRate([])).toBeUndefined();
+  });
+
+  test('all pools have zero tokens: undefined', () => {
+    expect(bestMarginalSellRate([makePool(1000, 0), makePool(2000, 0)])).toBeUndefined();
+  });
+
+  test('single pool: returns sats/tokens', () => {
+    expect(bestMarginalSellRate([makePool(100_000_000, 1_000_000)])).toBe(100);
+  });
+
+  test('multiple pools: returns highest rate (best for seller)', () => {
+    const pools = [
+      makePool(150_000_000, 1_000_000, 'aaaa'), // 150 sats/token
+      makePool(100_000_000, 1_000_000, 'bbbb'), // 100 sats/token
+      makePool(200_000_000, 1_000_000, 'cccc'), // 200 sats/token (best)
+    ];
+    expect(bestMarginalSellRate(pools)).toBe(200);
+  });
+
+  test('skips zero-token pools', () => {
+    const pools = [makePool(1000, 0, 'aaaa'), makePool(100_000_000, 1_000_000, 'bbbb')];
+    expect(bestMarginalSellRate(pools)).toBe(100);
+  });
+});
+
+describe('computeEffectiveBuyImpact', () => {
+  test('empty pools: undefined', () => {
+    expect(computeEffectiveBuyImpact([], [])).toBeUndefined();
+  });
+
+  test('empty allocations: undefined', () => {
+    const pool = makePool(100_000_000, 1_000_000);
+    expect(computeEffectiveBuyImpact([pool], [])).toBeUndefined();
+  });
+
+  test('single pool buy: positive premium matching manual calc', () => {
+    // 5% of pool buy -> ~5.58% effective premium (≈ Δ/T·1/(1-Δ/T) + ~0.32%)
+    const pool = makePool(100_000_000, 1_000_000);
+    const allocations = computeOptimalBuy([pool], 50_000n, 0n);
+    const impact = computeEffectiveBuyImpact([pool], allocations)!;
+
+    expect(impact).toBeGreaterThan(0);
+    expect(impact).toBeGreaterThan(0.054);
+    expect(impact).toBeLessThan(0.058);
+  });
+
+  test('tiny buy: effective premium dominated by fee (~0.3%)', () => {
+    const pool = makePool(1_000_000_000_000, 10_000_000_000); // 100 sats/token
+    const allocations = computeOptimalBuy([pool], 100_000n, 0n); // 0.001% of pool
+    const impact = computeEffectiveBuyImpact([pool], allocations)!;
+
+    // For trivially small trades, the 0.3% fee dominates slippage.
+    expect(impact).toBeGreaterThan(0.0029);
+    expect(impact).toBeLessThan(0.0035);
+  });
+
+  test('multi-pool buy: still positive', () => {
+    const pools = [
+      makePool(100_000_000, 1_000_000, 'aaaa'),
+      makePool(200_000_000, 2_000_000, 'bbbb'),
+    ];
+    const allocations = computeOptimalBuy(pools, 100_000n, 0n);
+    const impact = computeEffectiveBuyImpact(pools, allocations)!;
+    expect(impact).toBeGreaterThan(0);
+  });
+});
+
+describe('computeEffectiveSellImpact', () => {
+  test('empty pools: undefined', () => {
+    expect(computeEffectiveSellImpact([], [])).toBeUndefined();
+  });
+
+  test('empty allocations: undefined', () => {
+    const pool = makePool(100_000_000, 1_000_000);
+    expect(computeEffectiveSellImpact([pool], [])).toBeUndefined();
+  });
+
+  test('single pool sell: negative discount', () => {
+    // 5% of pool sell -> ~5% effective discount
+    const pool = makePool(100_000_000, 1_000_000);
+    const allocations = computeOptimalSell([pool], 50_000n, 0n);
+    const impact = computeEffectiveSellImpact([pool], allocations)!;
+
+    expect(impact).toBeLessThan(0);
+    expect(impact).toBeLessThan(-0.049);
+    expect(impact).toBeGreaterThan(-0.053);
+  });
+
+  test('multi-pool sell: still negative', () => {
+    const pools = [
+      makePool(100_000_000, 1_000_000, 'aaaa'),
+      makePool(200_000_000, 2_000_000, 'bbbb'),
+    ];
+    const allocations = computeOptimalSell(pools, 100_000n, 0n);
+    const impact = computeEffectiveSellImpact(pools, allocations)!;
+    expect(impact).toBeLessThan(0);
+  });
+});
+
+describe('computeMarginalBuyImpact', () => {
+  test('empty pools: undefined', () => {
+    expect(computeMarginalBuyImpact([], [])).toBeUndefined();
+  });
+
+  test('empty allocations: undefined', () => {
+    const pool = makePool(100_000_000, 1_000_000);
+    expect(computeMarginalBuyImpact([pool], [])).toBeUndefined();
+  });
+
+  test('single pool buy: positive curve displacement', () => {
+    // 5% of pool buy -> ~10.8% marginal displacement (= (1/(1-0.05))² - 1)
+    const pool = makePool(100_000_000, 1_000_000);
+    const allocations = computeOptimalBuy([pool], 50_000n, 0n);
+    const impact = computeMarginalBuyImpact([pool], allocations)!;
+
+    expect(impact).toBeGreaterThan(0);
+    expect(impact).toBeGreaterThan(0.107);
+    expect(impact).toBeLessThan(0.110);
+  });
+
+  test('marginal ≈ 2× effective on slippage-dominated trade', () => {
+    // Large trade so slippage dominates the 0.3% fee, satisfying the
+    // constant-product approximation that marginal displacement = 2× effective premium.
+    const pool = makePool(100_000_000, 1_000_000);
+    const allocations = computeOptimalBuy([pool], 50_000n, 0n);
+    const effective = computeEffectiveBuyImpact([pool], allocations)!;
+    const marginal = computeMarginalBuyImpact([pool], allocations)!;
+    const ratio = marginal / effective;
+    expect(ratio).toBeGreaterThan(1.8);
+    expect(ratio).toBeLessThan(2.0);
+  });
+
+  test('drained pool: undefined', () => {
+    const pool = makePool(100_000_000, 1_000_000);
+    const allocations: PoolAllocation[] = [
+      { pool, demandAmount: BigInt(pool.tokens), supplyAmount: 0n, feeAmount: 0n },
+    ];
+    expect(computeMarginalBuyImpact([pool], allocations)).toBeUndefined();
+  });
+
+  test('multi-pool buy: still positive', () => {
+    const pools = [
+      makePool(100_000_000, 1_000_000, 'aaaa'),
+      makePool(200_000_000, 2_000_000, 'bbbb'),
+    ];
+    const allocations = computeOptimalBuy(pools, 100_000n, 0n);
+    const impact = computeMarginalBuyImpact(pools, allocations)!;
+    expect(impact).toBeGreaterThan(0);
+  });
+});
+
+describe('computeMarginalSellImpact', () => {
+  test('empty pools: undefined', () => {
+    expect(computeMarginalSellImpact([], [])).toBeUndefined();
+  });
+
+  test('empty allocations: undefined', () => {
+    const pool = makePool(100_000_000, 1_000_000);
+    expect(computeMarginalSellImpact([pool], [])).toBeUndefined();
+  });
+
+  test('single pool sell: negative curve displacement', () => {
+    // 5% of pool sell -> ~-9.3% marginal displacement
+    const pool = makePool(100_000_000, 1_000_000);
+    const allocations = computeOptimalSell([pool], 50_000n, 0n);
+    const impact = computeMarginalSellImpact([pool], allocations)!;
+
+    expect(impact).toBeLessThan(0);
+    expect(impact).toBeLessThan(-0.092);
+    expect(impact).toBeGreaterThan(-0.095);
+  });
+
+  test('marginal ≈ 2× effective on slippage-dominated trade', () => {
+    const pool = makePool(100_000_000, 1_000_000);
+    const allocations = computeOptimalSell([pool], 50_000n, 0n);
+    const effective = computeEffectiveSellImpact([pool], allocations)!;
+    const marginal = computeMarginalSellImpact([pool], allocations)!;
+    const ratio = marginal / effective;
+    expect(ratio).toBeGreaterThan(1.7);
+    expect(ratio).toBeLessThan(2.0);
+  });
+
+  test('multi-pool sell: still negative', () => {
+    const pools = [
+      makePool(100_000_000, 1_000_000, 'aaaa'),
+      makePool(200_000_000, 2_000_000, 'bbbb'),
+    ];
+    const allocations = computeOptimalSell(pools, 100_000n, 0n);
+    const impact = computeMarginalSellImpact(pools, allocations)!;
+    expect(impact).toBeLessThan(0);
   });
 });
