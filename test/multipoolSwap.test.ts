@@ -46,7 +46,8 @@ const testPool3: CauldronActivePool = {
 
 function setupMultiPoolProvider(pools: CauldronActivePool[], userInputs: Utxo[]) {
   const provider = new MockNetworkProvider();
-  const options = { provider, addressType:'p2sh32' as const };
+  provider.network = 'mainnet';
+  const options = { provider, contractType:'p2sh32' as const };
 
   for (const pool of pools) {
     const cauldronContract = new Contract(cauldronArtifactWithPkh(pool.owner_pkh), [], options);

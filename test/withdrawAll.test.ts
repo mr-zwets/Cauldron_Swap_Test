@@ -24,7 +24,8 @@ const testFuruPool: CauldronActivePool = {
 describe('prepareWithdrawAll', () => {
   test('should succeed and have valid fee rate', async() => {
     const provider = new MockNetworkProvider();
-    const options = { provider, addressType:'p2sh32' as const };
+    provider.network = 'mainnet';
+    const options = { provider, contractType:'p2sh32' as const };
     const cauldronContract = new Contract(cauldronArtifactWithPkh(testFuruPool.owner_pkh), [], options);
     provider.addUtxo(cauldronContract.address, convertPoolToUtxo(testFuruPool))
 

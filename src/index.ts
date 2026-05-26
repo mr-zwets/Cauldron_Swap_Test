@@ -36,7 +36,7 @@ export async function getCauldronPools(tokenId:string, network:CauldronNetwork =
 function buildCauldronInputsOutputs(
   allocations: { pool: CauldronActivePool; demandAmount: bigint }[],
   direction: 'buy' | 'sell',
-  options: { provider: NetworkProvider; addressType: 'p2sh32' }
+  options: { provider: NetworkProvider; contractType: 'p2sh32' }
 ) {
   const cauldronInputs: { utxo: Utxo; contract: Contract }[] = [];
   const cauldronOutputs: Recipient[] = [];
@@ -106,7 +106,7 @@ export async function prepareBuyTokens(
   if(!pools.every(p => p.token_id === pools[0].token_id)) throw new Error('All pools must share the same token_id')
 
   const allocations = computeOptimalBuy(pools, amountToBuy, 2n);
-  const options = { provider, addressType:'p2sh32' as const };
+  const options = { provider, contractType:'p2sh32' as const };
 
   const { cauldronInputs, cauldronOutputs } = buildCauldronInputsOutputs(allocations, 'buy', options)
 
@@ -173,7 +173,7 @@ export async function prepareSellTokens(
 
   const allocations = computeOptimalSell(pools, amountToSell, 2n);
   const tokenId = allocations[0].pool.token_id;
-  const options = { provider, addressType:'p2sh32' as const };
+  const options = { provider, contractType:'p2sh32' as const };
 
   const { cauldronInputs, cauldronOutputs, totalUserReceive } = buildCauldronInputsOutputs(allocations, 'sell', options)
 
@@ -263,7 +263,7 @@ export async function prepareWithdrawAll(
   // Get the specific cauldron contract for the selected pool (based on owner pkh)
   // add 'false' to use the managePool artifact
   const cauldronArtifact = cauldronArtifactWithPkh(pool.owner_pkh, false)
-  const options = { provider, addressType:'p2sh32' as const };
+  const options = { provider, contractType:'p2sh32' as const };
   const cauldronContract = new Contract(cauldronArtifact, [], options);
 
   const requiredFee = 800n
@@ -318,7 +318,7 @@ export async function prepareCreatePool(
 
   // Build the Cauldron contract for this owner
   const cauldronArtifact = cauldronArtifactWithPkh(ownerPkh)
-  const options = { provider, addressType:'p2sh32' as const };
+  const options = { provider, contractType:'p2sh32' as const };
   const cauldronContract = new Contract(cauldronArtifact, [], options)
 
   const resolvedUserUtxos = userUtxos ?? await provider.getUtxos(userTokenAddress)

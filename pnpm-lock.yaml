@@ -12,8 +12,8 @@ importers:
         specifier: 3.1.0-next.8
         version: 3.1.0-next.8
       cashscript:
-        specifier: ^0.12.1
-        version: 0.12.1
+        specifier: ^0.13.0
+        version: 0.13.0
     devDependencies:
       typescript:
         specifier: ^6.0.2
@@ -28,8 +28,8 @@ packages:
     resolution: {integrity: sha512-Pm+Ju+YP3JeBLLTiVrBnia2wwE4G17r4XqpvPRMcklElJTe8J6x3JgKRg1by0Xm3ZY6UFxACkEAoSA+x419/zA==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
-  '@cashscript/utils@0.12.1':
-    resolution: {integrity: sha512-dGVbbFMUHZJFjmLkGQNrM0/hzoXlJgM8bYU1J5cX80Vo5n7dmopctmxplgXGd3u/h6hBUt3V7lTawGi8DBupJQ==}
+  '@cashscript/utils@0.13.0':
+    resolution: {integrity: sha512-58haS9On+nStA4LeTa03KFx6JcZlIiiHPDLwXGkYWs7M08rW16vsO70+NTBipGRFfpIFeSmq2tHJ72iI8GHJrg==}
 
   '@electrum-cash/debug-logs@1.0.0':
     resolution: {integrity: sha512-GU/CvRR9lZ0d8gy9CXGW7f//OHCIydBavv9q+JcxjGj8Xr7HwlGqHx+Wzhx9y3YmJrXfExpgClcd++gTjdEmzA==}
@@ -204,9 +204,6 @@ packages:
     peerDependencies:
       ws: '*'
 
-  '@mr-zwets/bchn-api-wrapper@1.0.1':
-    resolution: {integrity: sha512-EyKT6zgXh31JqTRsi+KCX04WPDjIqs80nfsafrKiUZTg8FgWzql1wSyYdggmeByB74yLHD0LouC40S8PMmvcZA==}
-
   '@rollup/rollup-android-arm-eabi@4.53.5':
     resolution: {integrity: sha512-iDGS/h7D8t7tvZ1t6+WPK04KD0MwzLZrG0se1hzBjSi5fyxlsiggoJHwh18PCFNn7tG43OWb6pdZ6Y+rMlmyNQ==}
     cpu: [arm]
@@ -371,8 +368,8 @@ packages:
   async-mutex@0.5.0:
     resolution: {integrity: sha512-1A94B18jkJ3DYq284ohPxoXbfTA5HsQ7/Mf4DEhcyLx3Bz27Rh59iScbB6EPiP+B+joue6YCxcMXSbFC1tZKwA==}
 
-  cashscript@0.12.1:
-    resolution: {integrity: sha512-IGKipstPw+/N+Nr5YyZf7LH89o32cmoMZFYZsEYQdOhMJQKp/m8lxkug8bPTm3oee+zzO4vYpDCbsBCaAhuj/A==}
+  cashscript@0.13.0:
+    resolution: {integrity: sha512-UCtJI+Rn/UaiqQ15e7DzjQ9+f8/AQCIFdapzGmMh3J44LCcZymFlFCyg9MNesk00PfPYFwusCc9neS78VBdcpA==}
 
   chai@6.2.2:
     resolution: {integrity: sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg==}
@@ -417,6 +414,9 @@ packages:
       picomatch:
         optional: true
 
+  fflate@0.8.3:
+    resolution: {integrity: sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==}
+
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -438,9 +438,6 @@ packages:
 
   obug@2.1.1:
     resolution: {integrity: sha512-uTqF9MuPraAQ+IsnPf366RG4cP9RtUi7MLO1N3KEc+wb0a6yKpeL0lmk2IB1jY5KHPAlTc6T/JRdC/YqxHNwkQ==}
-
-  pako@2.1.0:
-    resolution: {integrity: sha512-w+eufiZ1WuJYgPXbV/PO3NCMEc3xqylkKHzp8bxp1uW4qaSNQUkwmLLEc3kKsfz8lpV1F8Ht3U1Cm+9Srog2ug==}
 
   pathe@2.0.3:
     resolution: {integrity: sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==}
@@ -601,7 +598,7 @@ snapshots:
 
   '@bitauth/libauth@3.1.0-next.8': {}
 
-  '@cashscript/utils@0.12.1':
+  '@cashscript/utils@0.13.0':
     dependencies:
       '@bitauth/libauth': 3.1.0-next.8
 
@@ -721,8 +718,6 @@ snapshots:
   '@monsterbitar/isomorphic-ws@5.3.1(ws@8.18.3)':
     dependencies:
       ws: 8.18.3
-
-  '@mr-zwets/bchn-api-wrapper@1.0.1': {}
 
   '@rollup/rollup-android-arm-eabi@4.53.5':
     optional: true
@@ -856,13 +851,12 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  cashscript@0.12.1:
+  cashscript@0.13.0:
     dependencies:
       '@bitauth/libauth': 3.1.0-next.8
-      '@cashscript/utils': 0.12.1
+      '@cashscript/utils': 0.13.0
       '@electrum-cash/network': 4.1.4
-      '@mr-zwets/bchn-api-wrapper': 1.0.1
-      pako: 2.1.0
+      fflate: 0.8.3
       semver: 7.7.3
     transitivePeerDependencies:
       - bufferutil
@@ -920,6 +914,8 @@ snapshots:
     optionalDependencies:
       picomatch: 4.0.3
 
+  fflate@0.8.3: {}
+
   fsevents@2.3.3:
     optional: true
 
@@ -934,8 +930,6 @@ snapshots:
   nanoid@3.3.11: {}
 
   obug@2.1.1: {}
-
-  pako@2.1.0: {}
 
   pathe@2.0.3: {}
 

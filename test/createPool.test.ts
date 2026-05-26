@@ -14,6 +14,7 @@ const testTokenId = "d9ab24ed15a7846cc3d9e004aa5cb976860f13dac1ead05784ee4f4622a
 
 function setupCreatePoolTx(userInputs: Utxo[]) {
   const provider = new MockNetworkProvider();
+  provider.network = 'mainnet';
   for (const utxo of userInputs) {
     provider.addUtxo(testUserTokenAddress, utxo);
   }
